@@ -1,0 +1,10 @@
+{
+  "fresh": [
+    {"id":"lease-fencing","text":"A worker holds a renewable lease, pauses for 40 seconds and resumes after another worker acquired it. How do we prevent stale writes to storage?","expect":"NEW","rubric":["lease expiry alone does not stop old worker","monotonically increasing fencing token","storage atomically rejects older tokens","applies to every protected write; external systems must enforce or use another safe mechanism"]},
+    {"id":"pagination","text":"Our PostgreSQL feed is ordered by created_at descending. New rows arrive while clients paginate. Design pagination that handles equal timestamps and explain consistency limits.","expect":"NEW","rubric":["keyset cursor with created_at and unique id","matching deterministic order and tuple predicate","matching index","concurrent updates/deletes or fixed snapshot boundary limits; not claim arbitrary stable snapshot"]},
+    {"id":"retry-budget","text":"Three service layers each retry a failed operation three times. How would you contain overload while keeping transient failure recovery?","expect":"NEW","rubric":["retry amplification","one retry owner or coordinated bounded retry budget","deadline exponential backoff and jitter","idempotency and nonretryable classification","load shedding/circuit breaking or concurrency bounds"]},
+    {"id":"unicode-window","text":"In Python, find the longest substring without repeated Unicode code points. Return its length. Give complexity and clarify whether this handles user-perceived characters.","expect":"NEW","rubric":["sliding window last seen mapping","left=max(left,last_seen+1)","O(n) time and distinct-character space","Python code points differ from grapheme clusters"]},
+    {"id":"fragment-open","text":"Explain how a lease holder that pauses can","expect":"WAIT","rubric":["incomplete question waits"]},
+    {"id":"fragment-complete","scenario":"Explain how a lease holder that pauses can","text":"avoid overwriting a newer worker's writes when it resumes.","expect":"NEW","rubric":["reconstructs fragment","monotonic fencing token enforced by storage","lease alone insufficient"]}
+  ]
+}

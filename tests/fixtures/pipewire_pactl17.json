@@ -1,0 +1,257 @@
+{
+  "modules": [
+    {
+      "name": "libpipewire-module-rt",
+      "argument": "{\n            nice.level    = -11\n            rt.prio       = 88\n            #rt.time.soft = -1\n            #rt.time.hard = -1\n            #uclamp.min = 0\n            #uclamp.max = 1024\n        }",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-rt",
+        "object.id": "1",
+        "object.serial": "1"
+      }
+    },
+    {
+      "name": "libpipewire-module-protocol-native",
+      "argument": "{\n            # List of server Unix sockets, and optionally permissions\n            #sockets = [ { name = \"pipewire-0\" }, { name = \"pipewire-0-manager\" } ]\n        }",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-protocol-native",
+        "object.id": "2",
+        "object.serial": "2"
+      }
+    },
+    {
+      "name": "libpipewire-module-profiler",
+      "argument": "{\n            #profile.interval.ms = 0\n        }",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-profiler",
+        "object.id": "4",
+        "object.serial": "4"
+      }
+    },
+    {
+      "name": "libpipewire-module-metadata",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-metadata",
+        "object.id": "6",
+        "object.serial": "6"
+      }
+    },
+    {
+      "name": "libpipewire-module-spa-device-factory",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-spa-device-factory",
+        "object.id": "8",
+        "object.serial": "8"
+      }
+    },
+    {
+      "name": "libpipewire-module-spa-node-factory",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-spa-node-factory",
+        "object.id": "10",
+        "object.serial": "10"
+      }
+    },
+    {
+      "name": "libpipewire-module-client-node",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-client-node",
+        "object.id": "12",
+        "object.serial": "12"
+      }
+    },
+    {
+      "name": "libpipewire-module-client-device",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-client-device",
+        "object.id": "14",
+        "object.serial": "14"
+      }
+    },
+    {
+      "name": "libpipewire-module-portal",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-portal",
+        "object.id": "16",
+        "object.serial": "16"
+      }
+    },
+    {
+      "name": "libpipewire-module-access",
+      "argument": "{\n            # Socket-specific access permissions\n            #access.socket = { pipewire-0 = \"default\", pipewire-0-manager = \"unrestricted\" }\n\n            # Deprecated legacy mode (not socket-based),\n            # for now enabled by default if access.socket is not specified\n            #access.legacy = true\n        }",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-access",
+        "object.id": "17",
+        "object.serial": "17"
+      }
+    },
+    {
+      "name": "libpipewire-module-adapter",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-adapter",
+        "object.id": "18",
+        "object.serial": "18"
+      }
+    },
+    {
+      "name": "libpipewire-module-link-factory",
+      "argument": "{\n            #allow.link.passive = false\n\t}",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-link-factory",
+        "object.id": "20",
+        "object.serial": "20"
+      }
+    },
+    {
+      "name": "libpipewire-module-session-manager",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-session-manager",
+        "object.id": "22",
+        "object.serial": "22"
+      }
+    },
+    {
+      "name": "libpipewire-module-jackdbus-detect",
+      "argument": "{\n            #jack.library     = libjack.so.0\n            #jack.server      = null\n            #jack.client-name = PipeWire\n            #jack.connect     = true\n            #tunnel.mode      = duplex  # source|sink|duplex\n            source.props = {\n                #audio.channels = 2\n\t\t#midi.ports = 1\n                #audio.position = [ FL FR ]\n                # extra sink properties\n            }\n            sink.props = {\n                #audio.channels = 2\n\t\t#midi.ports = 1\n                #audio.position = [ FL FR ]\n                # extra sink properties\n            }\n        }",
+      "usage_counter": "n/a",
+      "properties": {
+        "module.name": "libpipewire-module-jackdbus-detect",
+        "object.id": "29",
+        "object.serial": "29"
+      }
+    },
+    {
+      "name": "module-always-sink",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {}
+    },
+    {
+      "name": "module-device-manager",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {}
+    },
+    {
+      "name": "module-device-restore",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {}
+    },
+    {
+      "name": "module-stream-restore",
+      "argument": "",
+      "usage_counter": "n/a",
+      "properties": {}
+    }
+  ],
+  "modules_short": "1\tlibpipewire-module-rt\t{\n            nice.level    = -11\n            rt.prio       = 88\n            #rt.time.soft = -1\n            #rt.time.hard = -1\n            #uclamp.min = 0\n            #uclamp.max = 1024\n        }\t\n2\tlibpipewire-module-protocol-native\t{\n            # List of server Unix sockets, and optionally permissions\n            #sockets = [ { name = \"pipewire-0\" }, { name = \"pipewire-0-manager\" } ]\n        }\t\n4\tlibpipewire-module-profiler\t{\n            #profile.interval.ms = 0\n        }\t\n6\tlibpipewire-module-metadata\t\t\n8\tlibpipewire-module-spa-device-factory\t\t\n10\tlibpipewire-module-spa-node-factory\t\t\n12\tlibpipewire-module-client-node\t\t\n14\tlibpipewire-module-client-device\t\t\n16\tlibpipewire-module-portal\t\t\n17\tlibpipewire-module-access\t{\n            # Socket-specific access permissions\n            #access.socket = { pipewire-0 = \"default\", pipewire-0-manager = \"unrestricted\" }\n\n            # Deprecated legacy mode (not socket-based),\n            # for now enabled by default if access.socket is not specified\n            #access.legacy = true\n        }\t\n18\tlibpipewire-module-adapter\t\t\n20\tlibpipewire-module-link-factory\t{\n            #allow.link.passive = false\n\t}\t\n22\tlibpipewire-module-session-manager\t\t\n29\tlibpipewire-module-jackdbus-detect\t{\n            #jack.library     = libjack.so.0\n            #jack.server      = null\n            #jack.client-name = PipeWire\n            #jack.connect     = true\n            #tunnel.mode      = duplex  # source|sink|duplex\n            source.props = {\n                #audio.channels = 2\n\t\t#midi.ports = 1\n                #audio.position = [ FL FR ]\n                # extra sink properties\n            }\n            sink.props = {\n                #audio.channels = 2\n\t\t#midi.ports = 1\n                #audio.position = [ FL FR ]\n                # extra sink properties\n            }\n        }\t\n536870912\tmodule-always-sink\t\t\n536870913\tmodule-device-manager\t\t\n536870914\tmodule-device-restore\t\t\n536870915\tmodule-stream-restore\t\t\n",
+  "sinks": [
+    {
+      "index": 61,
+      "name": "analog",
+      "description": "analog",
+      "owner_module": 4294967295,
+      "monitor_source": "analog.monitor",
+      "properties": {
+        "device.class": "sound",
+        "media.class": "Audio/Sink",
+        "object.id": "45",
+        "object.serial": "61",
+        "api.alsa.pcm.stream": "playback"
+      }
+    },
+    {
+      "index": 111,
+      "name": "hdmi",
+      "description": "hdmi",
+      "owner_module": 4294967295,
+      "monitor_source": "hdmi.monitor",
+      "properties": {
+        "device.class": "sound",
+        "media.class": "Audio/Sink",
+        "object.id": "57",
+        "object.serial": "111",
+        "api.alsa.pcm.stream": "playback"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "index": 60,
+      "name": "webcam-input",
+      "description": "webcam-input",
+      "owner_module": 4294967295,
+      "monitor_source": "",
+      "properties": {
+        "device.class": "sound",
+        "media.class": "Audio/Source",
+        "object.id": "44",
+        "object.serial": "60",
+        "api.alsa.pcm.stream": "capture"
+      }
+    },
+    {
+      "index": 61,
+      "name": "analog.monitor",
+      "description": "analog.monitor",
+      "owner_module": 4294967295,
+      "monitor_source": "analog",
+      "properties": {
+        "device.class": "monitor",
+        "media.class": "Audio/Sink",
+        "object.id": "45",
+        "object.serial": "61",
+        "api.alsa.pcm.stream": "playback"
+      }
+    },
+    {
+      "index": 62,
+      "name": "analog-input",
+      "description": "analog-input",
+      "owner_module": 4294967295,
+      "monitor_source": "",
+      "properties": {
+        "device.class": "sound",
+        "media.class": "Audio/Source",
+        "object.id": "43",
+        "object.serial": "62",
+        "api.alsa.pcm.stream": "capture"
+      }
+    },
+    {
+      "index": 111,
+      "name": "hdmi.monitor",
+      "description": "hdmi.monitor",
+      "owner_module": 4294967295,
+      "monitor_source": "hdmi",
+      "properties": {
+        "device.class": "monitor",
+        "media.class": "Audio/Sink",
+        "object.id": "57",
+        "object.serial": "111",
+        "api.alsa.pcm.stream": "playback"
+      }
+    }
+  ]
+}

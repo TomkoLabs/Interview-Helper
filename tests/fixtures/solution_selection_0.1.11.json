@@ -1,0 +1,20 @@
+[
+  {
+    "id": "simple_baseline",
+    "speech": "Given a string s and an array of words, count how many words are subsequences of s. Use Java. Count duplicates separately and include empty words.",
+    "rubric": "Recommend a separate two-pointer scan per word; readable loops and descriptive indices; count empty words and duplicate entries. State O(W * (n + 1)) worst-case time and O(1) auxiliary space. Do not invent restrictive input bounds. At most one optional optimization bullet, no second implementation.",
+    "reject": "Position index, binary search or waiting buckets as the default without a need; compressed clever control flow; silently omitting empty-word overhead."
+  },
+  {
+    "id": "explicit_optimization",
+    "speech": "Now optimize the same task. s is fixed and contains one million characters. We handle many independent small batches, may preprocess once, and must not rescan s for every word or batch.",
+    "rubric": "UPDATE the same card; explain why repeated scans are inadequate. Use reusable character-position lists and next-position search or another justified index. Separate preprocessing and per-batch costs, preserve empty/duplicate handling and state alphabet assumptions if using a dense table. One implementation.",
+    "reject": "Recommend the initial two-pointer scan for every word/batch; NEW duplicate card; build the index again per batch; assume a tiny alphabet without qualification."
+  },
+  {
+    "id": "bounds_require_optimization",
+    "speech": "Count matching subsequences in Java. s has 100000 characters and there are 50000 words of length at most 50. Worst-case runtime must avoid scanning all of s for each word. Duplicates and empty words count.",
+    "rubric": "Recommend a scalable approach immediately, such as waiting buckets with the current bucket detached before advancing, or a justified position index. Explain actual complexity and empty/duplicate handling; retain the simplest readable implementation meeting the bound.",
+    "reject": "Recommend roughly five billion character checks as the adequate solution; first supply an impractical baseline implementation then another implementation; advance one word twice using the same character."
+  }
+]

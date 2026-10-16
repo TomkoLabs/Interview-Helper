@@ -1,0 +1,7 @@
+[
+  {"at":0,"source":"replay-speakers","label":"Synthetic playback","text":"Explain the"},
+  {"at":4,"source":"replay-speakers","label":"Synthetic playback","text":"difference between a Python list and a tuple"},
+  {"at":10,"source":"replay-speakers","label":"Synthetic playback","text":"What if a tuple contains a mutable list?"},
+  {"at":17,"source":"replay-speakers","label":"Synthetic playback","text":"Compare a Java counter in a single JVM with one shared by multiple processes."},
+  {"at":25,"source":"replay-speakers","label":"Synthetic playback","text":"Actually, Java 8, without locks. What requirements would you clarify?"}
+]

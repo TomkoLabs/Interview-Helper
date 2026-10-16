@@ -1,0 +1,191 @@
+{
+  "screen": [
+    {
+      "id": "definition",
+      "text": "Explain what a database transaction is and what isolation does not guarantee about external HTTP calls.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Database changes commit or roll back together; isolation concerns concurrent transactions; external HTTP side effects are not automatically transactional.",
+      "reject": "Claims rollback undoes HTTP calls or isolation guarantees external exactly-once."
+    },
+    {
+      "id": "algorithm",
+      "text": "Find whether an unsorted integer array contains two distinct indices whose values sum to a target. Give an approach, complexity, and the duplicate-value edge case.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "One pass hash set/map; check complement before insert; expected O(n) time/O(n) space; equal values require two occurrences.",
+      "reject": "Reuses the same index; claims hash worst-case O(n) unconditionally; omits complexity or duplicates."
+    }
+  ],
+  "heldout": [
+    {
+      "id": "compare",
+      "text": "Compare TCP and UDP for a live voice stream. Explain reliability, ordering, and the latency tradeoff.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "TCP reliable ordered byte stream with retransmission/head-of-line delay; UDP datagrams no built-in reliable ordering; application must handle loss/jitter.",
+      "reject": "UDP guarantees delivery or order; TCP preserves message boundaries; no tradeoff."
+    },
+    {
+      "id": "debug",
+      "text": "Python workers consume a queue. A worker can raise before task_done(), and queue.join() hangs. How do you diagnose and fix this without silently losing failed jobs?",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Unfinished-task counter; task_done exactly once per successful get in finally; separately record/retry failures; task_done is not business success.",
+      "reject": "Call task_done without get; suppress errors/drop failed work; join waits merely for empty queue."
+    },
+    {
+      "id": "design",
+      "text": "Design a URL shortener with multiple writers. How do you prevent short-code collisions and handle a popular link? Keep original URLs durable.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Durable mapping with atomic uniqueness constraint/retry or coordinated unique IDs; cache hot redirects with backing persistence; tradeoff or failure consideration.",
+      "reject": "Randomness alone guarantees uniqueness; cache alone is durable; non-atomic check-then-insert."
+    },
+    {
+      "id": "coding",
+      "text": "Find the first common node of two acyclic singly linked lists by node identity, using O(1) extra space. Explain complexity and the no-intersection case.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Two-pointer head switching or length alignment; O(m+n) time/O(1) space; identity not value; terminates at null when disjoint.",
+      "reject": "Compares values; uses hash set; misses null termination or complexity."
+    },
+    {
+      "id": "compound",
+      "text": "Explain C++ unique_ptr versus shared_ptr, ownership transfer, and how to prevent a shared_ptr reference cycle.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Unique ownership moves not copies; shared reference-counted ownership; weak_ptr breaks cycles without owning.",
+      "reject": "Copies unique_ptr; reference count automatically collects cycles; weak_ptr owns."
+    },
+    {
+      "id": "followup",
+      "text": "Was my answer correct, and how should I improve it?",
+      "active": "Explain consistent hashing.",
+      "actions": [
+        "NEW",
+        "UPDATE"
+      ],
+      "facts": "Explicitly says candidate spoken answer unavailable; conditional framework on consistent hashing/remapping without claiming correctness.",
+      "reject": "Invents or validates candidate answer; purely WAIT/no useful conditional guidance."
+    },
+    {
+      "id": "wait",
+      "text": "Before I finish describing the problem, compare the",
+      "actions": [
+        "WAIT"
+      ],
+      "facts": "Incomplete operands; WAIT without invented question.",
+      "reject": "Answers an invented comparison."
+    },
+    {
+      "id": "correction",
+      "text": "Actually, negative edge weights are allowed, but there are no negative cycles. Correct the algorithm and complexity.",
+      "active": "Find single-source shortest paths using Dijkstra.",
+      "scenario": "A directed graph has V vertices and E edges; earlier we assumed nonnegative edges.",
+      "actions": [
+        "UPDATE"
+      ],
+      "facts": "Dijkstra invalid for general negative edges; Bellman-Ford O(VE), or justified valid alternative; honors no negative cycles.",
+      "reject": "Continues ordinary Dijkstra; wrong complexity; creates duplicate NEW card."
+    },
+    {
+      "id": "constraint",
+      "text": "In Java 8 one process needs a thread-safe incrementing counter. AtomicLong is allowed, but synchronized blocks and explicit locks are not. What should we use and what does it guarantee?",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "AtomicLong incrementAndGet/getAndIncrement; atomic/linearizable increment; no claim arbitrary multi-step invariants become atomic.",
+      "reject": "Uses locks, LongAdder for unique linearizable IDs, Java 9-only APIs, or cross-process claims."
+    },
+    {
+      "id": "repeat",
+      "text": "Explain consistent hashing.",
+      "active": "Explain consistent hashing.",
+      "actions": [
+        "IGNORE"
+      ],
+      "facts": "Unchanged consecutive question should not create a duplicate card; application dedup separately tested.",
+      "reject": "NEW or UPDATE without material change."
+    },
+    {
+      "id": "idempotency",
+      "text": "A payments API may commit a charge and lose its HTTP response. The client retries. Design idempotency without charging twice, including concurrent retries and changed request bodies.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Persist scoped idempotency key with request fingerprint and result; atomic claim or uniqueness serializes concurrent duplicates; same key/different payload rejected; downstream charge must share transaction or its own idempotency boundary.",
+      "reject": "Check then insert without atomicity; database row alone makes external charge exactly once; new key on each retry."
+    },
+    {
+      "id": "outbox",
+      "text": "An order service must commit an order in SQL and publish an event to a broker. Explain the transactional outbox and the crash window after publish but before marking sent.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Order and outbox row in same DB transaction; relay retries; crash causes duplicate delivery; consumer idempotency/dedup; no blanket exactly-once claim.",
+      "reject": "Publishing in SQL transaction makes broker atomic; marking sent first; claims exactly-once delivery."
+    },
+    {
+      "id": "sql-null",
+      "text": "In SQL, NOT IN (SELECT customer_id FROM blocked) unexpectedly returns no customers when blocked includes NULL. Explain why and give a NULL-safe exclusion query. Assume customers.id is non-null.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "NULL makes nonmatching NOT IN unknown via three-valued logic; correlated NOT EXISTS matching blocked.customer_id=customers.id works; or filter subquery NULL.",
+      "reject": "NULL equals NULL; NOT IN always equivalent to NOT EXISTS with nullable subquery."
+    },
+    {
+      "id": "lru",
+      "text": "Implement an LRU cache with expected O(1) get and put, fixed positive capacity, updating existing keys and evicting the least recently used. Which structures and operations are needed?",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Hash map key to doubly linked node; get/update move node to MRU; new insert evicts LRU and removes map entry if over capacity; update does not grow size; expected O(1).",
+      "reject": "Singly linked list or scanning array yields O(1) arbitrary deletion; stale map entries; update duplicates keys."
+    },
+    {
+      "id": "async-cancel",
+      "text": "In Python asyncio a worker acquires a semaphore then awaits network I/O. Cancellation can arrive during I/O. How should cleanup and CancelledError be handled, including ownership if acquire itself is cancelled?",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Use async with semaphore or acquire before try/finally release; release only if acquired; cleanup in finally; normally propagate CancelledError; avoid broad suppression.",
+      "reject": "Always release even when acquire failed; swallow cancellation as success; claim Exception catches CancelledError on current Python."
+    },
+    {
+      "id": "binary-search",
+      "text": "Find the first index whose sorted integer value is >= target, returning n if absent. Give half-open binary search bounds, updates, invariant and complexity, including empty arrays.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "lo=0 hi=n; while lo<hi mid=lo+(hi-lo)//2; if a[mid]<target lo=mid+1 else hi=mid; return lo; partition invariant; O(log n) time O(1) space; empty returns0.",
+      "reject": "Access a[n]; stalls by lo=mid; returns last duplicate; invalid empty access."
+    },
+    {
+      "id": "cache-race",
+      "text": "A reader misses a cache, reads old DB data, then pauses. A writer commits new data and deletes the cache entry. The reader resumes and caches old data. Does delete-after-write prevent stale reads? Propose a mitigation and its limits.",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "Identifies stale refill race; TTL bounds duration but not strict consistency; coordinated versioned fill/invalidation with retained version marker or shared locking/DBvalidation, or bypass cache for strict reads; explicit limits.",
+      "reject": "Delete-after-write eliminates race; version attached only to cache value prevents stale fill after deletion; TTL ensures immediate consistency."
+    },
+    {
+      "id": "java-process",
+      "text": "Two Java 8 JVM processes on one Linux machine need a shared incrementing counter. No files locks or external service are allowed. Can an AtomicLong in each process or a memory-mapped file alone provide a portable lock-free shared counter?",
+      "actions": [
+        "NEW"
+      ],
+      "facts": "No independent AtomicLong shares state across JVMs; Java8 mapped bytes alone do not specify portable interprocess atomic RMW/memory ordering; need relax portability/constraints or supported native platform primitive; distinguish threads from processes.",
+      "reject": "Mapped AtomicLong works; VarHandle available Java8; FileChannel lock permitted; claim portable Unsafe crossprocess guarantee."
+    }
+  ]
+}

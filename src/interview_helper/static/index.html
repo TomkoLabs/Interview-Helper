@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>IH</title>
+    <script src="/static/theme.js"></script>
+    <link rel="stylesheet" href="/static/app.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/" aria-label="IH home"
+        ><span class="logo">IH<span>•</span></span
+        ><span>IH</span></a
+      >
+      <div class="header-actions">
+        <button
+          id="themeToggle"
+          type="button"
+          aria-label="Dark mode"
+          aria-pressed="true"
+        >
+          Dark
+        </button>
+        <span id="connection" class="connection">Connecting</span
+        ><button id="sessionsButton" class="quiet">
+          Saved sessions <span>↗</span></button
+        ><button id="startButton" class="primary">
+          Start session <span>→</span></button
+        ><button id="endButton" class="end" hidden>
+          End session <span>□</span>
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="workspace">
+        <section class="conversation-panel" aria-label="Interview hints">
+          <div class="panel-heading">
+            <div>
+              <h2>Question notebook</h2>
+              <span id="questionCount">Ready when you are</span>
+            </div>
+            <div class="reading-controls">
+              <label for="textSize">Text</label
+              ><button id="smaller" aria-label="Smaller text">A−</button
+              ><input
+                type="range"
+                id="textSize"
+                min="17"
+                max="30"
+                value="20"
+                aria-label="Answer text size"
+              /><button id="larger" aria-label="Larger text">A+</button>
+            </div>
+          </div>
+          <div id="history" tabindex="0">
+            <div id="empty">
+              <div class="empty-symbol">↳</div>
+              <h3>Stay in the conversation.</h3>
+              <p>
+                Questions and concise hints will appear here as you listen.<br />Your
+                transcript saves continuously, even if models go offline.
+              </p>
+              <div class="empty-steps">
+                <span><b>01</b> Start your session</span
+                ><span><b>02</b> Join your call normally</span
+                ><span><b>03</b> Make the answer yours</span>
+              </div>
+            </div>
+            <div id="cards"></div>
+          </div>
+          <button id="latestButton" class="latest" hidden>
+            Return to latest ↓
+          </button>
+          <div class="panel-footer">
+            <span
+              ><i class="tiny-dot"></i> Hints support your thinking. They are
+              not spoken conversation.</span
+            ><button id="reviewButton" class="quiet" disabled>
+              Review now
+            </button>
+          </div>
+        </section>
+        <aside>
+          <section class="status-panel">
+            <div class="aside-title">
+              <h2>Session pulse</h2>
+              <span id="modeBadge">STANDBY</span>
+            </div>
+            <div class="status-row">
+              <span
+                ><i class="status-dot" id="captureDot"></i>Playback
+                capture</span
+              ><strong id="captureStatus">Idle</strong>
+            </div>
+            <div class="status-row">
+              <span
+                ><i class="status-dot" id="asrDot"></i>Local transcription</span
+              ><strong id="asrStatus">Idle</strong>
+            </div>
+            <div class="status-row">
+              <span><i class="status-dot" id="modelDot"></i>AI hints</span
+              ><strong id="modelStatus">Idle</strong>
+            </div>
+            <div class="status-row">
+              <span><i class="status-dot" id="saveDot"></i>Continuous save</span
+              ><strong id="saveStatus">Idle</strong>
+            </div>
+            <div class="session-clock">
+              <span class="live-dot" id="liveDot"></span
+              ><span id="sessionLabel">Ready</span><span id="timer">00:00</span>
+            </div>
+            <p id="backendLabel">Local LiteLLM</p>
+            <p id="cloudDisclosure" hidden>
+              Cloud selected: transcript context leaves this local environment
+              and is sent to OpenAI. Audio remains local.
+            </p>
+            <div id="hosts"></div>
+            <div id="savedLocation" hidden><p id="transcriptPath"></p><a id="downloadTranscript">Download readable transcript</a><p id="readableError" role="status"></p></div>
+            <button id="retrySave" hidden>Retry saving</button>
+          </section>
+          <section class="devices-panel">
+            <div class="aside-title">
+              <h2>Listening to</h2>
+              <span>AUTO</span>
+            </div>
+            <div id="devices">
+              <p class="muted">
+                Playback devices appear when your session starts.
+              </p>
+            </div>
+            <p class="aside-note">
+              Speakers & headsets, discovered automatically.<br />Your
+              microphone stays outside this session.
+            </p>
+          </section>
+          <details id="transcriptPanel">
+            <summary>
+              <span>Live transcript</span><span class="summary-plus">+</span>
+            </summary>
+            <div class="transcript-note">
+              Captured playback / remote conversation
+            </div>
+            <div id="transcript"></div>
+            <div id="provisional"></div>
+          </details>
+          <details class="cloud-settings">
+            <summary>Model connection<span>+</span></summary>
+            <p>Connection choices are saved for future sessions and restarts. Sign-in alone does not switch models.</p>
+            <label for="cloudAccount">ChatGPT account</label>
+            <select id="cloudAccount">
+              <option value="">New account / workspace</option>
+            </select>
+            <button id="cloudLogin">Continue with ChatGPT</button>
+            <button id="cloudLogout">Sign out selected account</button>
+            <label for="cloudProvider">Connection</label>
+            <select id="cloudProvider">
+              <option value="chatgpt">ChatGPT plan</option>
+              <option value="openai_api" selected>
+                OpenAI API key · separate API billing
+              </option>
+            </select>
+            <button id="cloudModels">Load available models</button>
+            <label for="cloudModel">Account model</label
+            ><select id="cloudModel"></select>
+            <label for="cloudTier">Processing (API billing)</label>
+            <select id="cloudTier"><option value="default">Standard</option><option value="fast">Fast · higher API rates</option><option value="ultrafast" selected>Ultrafast · Sol only · highest API rates</option></select>
+            <label for="cloudTransport">Connection</label>
+            <select id="cloudTransport"><option value="http" selected>HTTP · recommended for paid Sol</option><option value="websocket">Persistent WebSocket · optional trial</option></select>
+            <label for="cloudReasoning">Reasoning</label
+            ><select id="cloudReasoning">
+              <option value="low">Low</option>
+              <option value="none">None (if supported by model)</option>
+            </select>
+            <button id="cloudSelect">
+              Use cloud · send transcript context
+            </button>
+            <button id="localSelect">Use configured local models</button>
+            <p id="cloudStatus" role="status">Load models to verify the selected account. API keys stay on the backend.</p>
+            <a
+              href="https://chatgpt.com/settings/usage"
+              target="_blank"
+              rel="noreferrer"
+              >ChatGPT usage and app limits ↗</a
+            >
+          </details>
+          <details class="session-tools">
+            <summary>Session tools<span>+</span></summary>
+            <p>
+              Clear active question context if the topic changes completely or
+              its limit is reached. Saved text stays intact.
+            </p>
+            <button id="resetContext">Reset question context</button>
+          </details>
+          <div id="notice" role="status"></div>
+          <div class="permission-note">
+            <span>◈</span>
+            <p>
+              Made for mock interviews and conversations where assistance is
+              permitted.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+    <footer>
+      <span>IH <span id="version"></span></span
+      ><span>Audio stays local · Text goes to your configured model</span>
+    </footer>
+    <dialog id="savedDialog">
+      <div class="dialog-heading">
+        <div class="eyebrow">YOUR ARCHIVE</div>
+        <button id="closeSaved" aria-label="Close saved sessions">✕</button>
+      </div>
+      <h2>Saved sessions</h2>
+      <p class="muted">
+        Playback transcripts and AI hints are stored separately.
+      </p>
+      <div id="savedList"></div>
+      <div id="savedDetail"></div>
+    </dialog>
+  </body>
+</html>

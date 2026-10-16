@@ -1,0 +1,43 @@
+# First-install defaults. Existing config and saved connection choices take precedence.
+# Cloud hints send transcript context to OpenAI; API billing applies.
+# Configure the backend-only key with scripts/configure_openai.py.
+port = 8787
+strategy = "single"
+data_dir = "Transcribed"
+model_dir = "Models"
+review_seconds = 1.8
+context_seconds = 90
+context_chars = 6000
+candidate_context = "" # Optional real experience/job context; never invented.
+
+[asr]
+model = "large-v3-turbo"
+model_revision = "0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf" # Pinned converted model
+device = "cuda"
+compute_type = "float16"
+language = "en"
+glossary = "Java, Perl, C++, Python, SQL, API, idempotency, mutex, deadlock"
+
+[capture]
+include = [] # Optional monitor-name glob patterns. Empty means automatic.
+exclude = []
+rms_threshold = 0.002
+
+# Local fallback remains optional: add up to two [[local_endpoints]] tables
+# using the endpoint fields in docs/CLOUD.md. Selection is explicit.
+[[endpoints]]
+name = "OpenAI API"
+host_id = "openai-cloud"
+base_url = "https://api.openai.com/v1"
+backend = "openai_api"
+model = "gpt-6.1-sol"
+api_key_env = "OPENAI_API_KEY"
+api_key_file = ".local/openai-api-key"
+transport = "http"
+compact = true
+timeout = 120
+cancel_supported = false
+[endpoints.parameters]
+reasoning_effort = "low"
+service_tier = "ultrafast"
+max_output_tokens = 1024

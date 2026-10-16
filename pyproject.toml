@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interview-helper"
+dynamic = ["version"]
+requires-python = ">=3.11,<3.14"
+description = "Local playback transcription and concise interview hints"
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "LICENSE-WhisperStreaming", "THIRD_PARTY.md", "src/interview_helper/vendor/LICENSE-WhisperLiveKit"]
+dependencies = ["fastapi==0.135.1", "uvicorn==0.42.0", "httpx==0.28.1", "numpy==2.4.6", "PyJWT[crypto]==2.10.1", "filelock==4.1.1", "websockets==15.0.1"]
+
+[project.scripts]
+interview-helper = "interview_helper.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "interview_helper.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+interview_helper = ["static/*", "prompts/*", "vendor/LICENSE-WhisperLiveKit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
