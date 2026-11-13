@@ -1,8 +1,10 @@
 "use strict";
 let connectionInitialized = false;
+let microphonePreferenceError = "";
 const $ = (id) => document.getElementById(id);
 let csrf = "",
   following = true,
+  followFromStart = true,
   automaticScrollTop = null,
   unseen = 0,
   lastSession = null,
@@ -34,11 +36,12 @@ function renderAnswer(element, text) {
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (!line.trim() || /^[-*]\s*$/.test(line.trim())) continue;
     const fence = /^```([a-z][a-z0-9+#-]{0,19}) (snippet|complete)$/.exec(line);
     const end = fence ? lines.indexOf("```", i + 1) : -1;
     if (fence && end > i + 1) {
       list = null;
-      element.append(node("div", "code-label", fence[1] + (fence[2] === "snippet" ? " · core snippet" : " · implementation")));
+      if (fence[2] === "snippet") element.append(node("div", "code-label", "Core snippet"));
       const pre = node("pre");
       pre.append(node("code", "", lines.slice(i + 1, end).join("\n")));
       element.append(pre);
@@ -61,10 +64,67 @@ function renderAnswer(element, text) {
     }
   }
 }
-async function api(path, method = "GET") {
+function renderGuidance(element, card) {
+  if (!card.reference && !card.guidance && !card.requirements) {
+    renderAnswer(element, card.answer || "");
+    return;
+  }
+  const requirementsOpen = element.querySelector(".task-requirements")?.open || false;
+  const oldCode = element.querySelector("pre");
+  const codeText = oldCode?.textContent;
+  const codeScroll = oldCode?.scrollLeft || 0;
+  element.replaceChildren();
+  const facts = (card.requirements || []).filter(f => typeof f.text === "string" && f.text.trim() && !/^[-*]\s*$/.test(f.text.trim()));
+  if (facts.length) {
+    const summary = node("details", "task-requirements");
+    summary.open = requirementsOpen;
+    summary.append(node("summary", "", "Problem requirements and assumptions"));
+    const list = node("ul");
+    facts.forEach((f) => {
+      const li = node("li", f.status === "active" ? "" : "muted", f.kind + ": " + f.text + (f.status === "active" ? "" : " · " + (f.status || "unreviewed").replaceAll("_", " ")));
+      li.title = "Playback evidence: " + (f.segments || []).map(s => s + (f.evidence_revisions?.[s] ? " (revision " + f.evidence_revisions[s] + ")" : "")).join(", ") + (f.evidence_status === "source_changed" ? " · source changed" : "");
+      list.append(li);
+    });
+    summary.append(list);
+    element.append(summary);
+  }
+  if (card.focus && !card.latest_followup) element.append(node("div", "guidance-label", card.focus));
+  const guidance = node("div");
+  renderAnswer(guidance, card.guidance || card.answer || "");
+  element.append(guidance);
+  if (card.reference) {
+    const ref = card.reference;
+    // Freshness is not a known conflict. Keep provenance in card metadata and
+    // reserve prominent notices for invalidated code or a failed replacement.
+    const warnings = [];
+    if (ref.status === "needs_revision") warnings.push("Update needed" + (ref.reason ? ": " + ref.reason : "."));
+    if (card.review_status === "failed") warnings.push("Latest update failed; retained code shown.");
+    if (warnings.length) element.append(node("p", "reference-warning", warnings.join(" ")));
+    const code = node("div", "reference-code");
+    renderAnswer(code, ref.code);
+    if (ref.notes) {
+      const notes = node("div");
+      renderAnswer(notes, ref.notes);
+      code.append(notes);
+    }
+    element.append(code);
+    const currentCode = code.querySelector("pre");
+    if (currentCode && currentCode.textContent === codeText) currentCode.scrollLeft = codeScroll;
+  } else if (card.reference_action === "clear") {
+    element.append(node("p", "reference-status", "Reference cleared: " + card.reference_reason));
+  }
+  if (card.latest_followup?.text?.trim()) {
+    const followup = node("ul", "latest-followup");
+    const bullet = node("li");
+    textWithCode(bullet, "Latest follow-up: " + card.latest_followup.text);
+    followup.append(bullet); element.append(followup);
+  }
+}
+async function api(path, method = "GET", body) {
   const response = await fetch("/api/" + path, {
     method,
-    headers: method === "GET" ? {} : { "X-Interview-CSRF": csrf },
+    headers: method === "GET" ? {} : { "X-Interview-CSRF": csrf, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
     let message = "Request failed (" + response.status + ")";
@@ -76,7 +136,9 @@ async function api(path, method = "GET") {
   return response.json();
 }
 function setStatus(key, value) {
-  $(key + "Status").textContent = value;
+  const compact = /failed|exhausted|unavailable|unconfigured|limit/i.test(value) ? "Needs attention" : value.length > 36 ? value.slice(0, 33) + "…" : value;
+  $(key + "Status").textContent = compact;
+  $(key + "Status").title = value;
   $(key + "Dot").className =
     "status-dot " +
     (/failed|unavailable|limit|unconfigured/i.test(value)
@@ -85,7 +147,7 @@ function setStatus(key, value) {
         ? ""
         : "good");
 }
-function cardElement(card, index, expanded) {
+function cardElement(card, index, expanded, activeTask) {
   let entry = cards.get(card.id);
   if (!entry) {
     const el = node("article", "card");
@@ -114,21 +176,23 @@ function cardElement(card, index, expanded) {
   entry.number.textContent = String(index + 1).padStart(2, "0");
   entry.toggle.textContent = card.question;
   entry.status.textContent =
-    (card.developing ? "Developing question · " : "") +
+    (card.developing ? "Question incomplete · " : "") +
     (card.state === "complete" ? "" : card.state + " · ") +
-    (card.host || "") + (card.diagnostics?.response_service_tier ? " · effective " + card.diagnostics.response_service_tier : "");
+    (card.host || "") + (card.diagnostics?.response_service_tier ? " · effective " + card.diagnostics.response_service_tier : "") +
+    (activeTask && card.review_status === "pending" && card.state !== "updating" ? " · New speech awaiting review" : "");
   entry.preview.replaceChildren();
   entry.preview.hidden = !card.preview;
   if (card.preview) {
     entry.preview.append(node("b", "", "New guidance · validating replacement"));
     const content = node("div");
     renderAnswer(content, card.preview);
-    entry.preview.append(content, node("small", "", "Previous answer below; replaced together after validation."));
+    entry.preview.append(content, node("small", "", "Previous reference remains below; changes apply only after validation."));
   }
   entry.el.classList.toggle("drafting", card.state !== "complete");
-  if (entry.lastAnswer !== card.answer) {
-    renderAnswer(entry.answer, card.answer);
-    entry.lastAnswer = card.answer;
+  const contentKey = JSON.stringify([card.answer, card.guidance, card.reference, card.requirements, card.focus, card.review_status, card.latest_followup]);
+  if (entry.lastAnswer !== contentKey) {
+    renderGuidance(entry.answer, card);
+    entry.lastAnswer = contentKey;
   }
   const open = manual.has(card.id) ? !manual.get(card.id) : expanded;
   entry.answer.hidden = !open;
@@ -157,11 +221,28 @@ function render(data) {
     $("cards").replaceChildren();
     unseen = 0;
     following = true;
+    followFromStart = true;
     lastSession = data.session_id;
   }
   const active = ["starting", "recording", "stopping", "save_failed"].includes(
     data.state,
   );
+  $("includeMicrophone").disabled = active;
+  $("includeMicrophone").checked = Boolean(data.microphone_enabled);
+  const mic = data.microphone || {};
+  $("useMicrophoneContext").disabled = active;
+  $("useMicrophoneContext").checked = Boolean(data.microphone_context_enabled);
+  $("microphoneStatus").textContent = data.microphone_enabled ? "Microphone · " + (mic.state || "idle") + (mic.outage ? " · outage unresolved" : "") : "Microphone · off";
+  $("microphoneDetails").textContent = [mic.label, mic.state, mic.reason,
+    mic.reference ? "Reference: " + mic.reference : "",
+    mic.lag_seconds != null ? "Queue " + mic.lag_seconds + "s" : "",
+    mic.buffer_seconds != null ? "Recognition buffer " + mic.buffer_seconds + "s" : "",
+    mic.scheduling_seconds != null ? "Scheduling " + mic.scheduling_seconds + "s" : "",
+    mic.inference_seconds != null ? "Recognition " + mic.inference_seconds + "s" : "",
+    mic.attempts ? "Retry attempts " + mic.attempts : "",
+    mic.last_segment_at != null ? "Last finalized speech at " + Math.floor(mic.last_segment_at) + "s" : "No finalized microphone speech yet"
+  ].filter(Boolean).join(" · ");
+  $("diagnostics").replaceChildren(...(mic.diagnostics || []).map(d => node("p", "", Math.floor(d.at) + "s · " + d.reason + " · attempts " + d.attempts)));
   $("startButton").hidden = active;
   $("endButton").hidden = !active;
   $("endButton").disabled = data.state === "stopping";
@@ -175,7 +256,7 @@ function render(data) {
   $("savedLocation").hidden = !data.transcript_path;
   $("transcriptPath").textContent = data.transcript_path ? "Transcript: " + data.transcript_path : "";
   $("downloadTranscript").href = "/api/sessions/" + encodeURIComponent(data.session_id || "") + "/transcript";
-  $("downloadTranscript").hidden = data.state !== "ended" && data.state !== "failed";
+  $("downloadTranscript").hidden = !data.session_id;
   $("readableError").textContent = data.readable_error || "";
   const cloud = (data.backend || []).some((e) => e.kind !== "chat_completions");
   if (!connectionInitialized) {
@@ -192,10 +273,13 @@ function render(data) {
     }
   }
   $("cloudDisclosure").hidden = !cloud;
-  $("backendLabel").textContent =
+  $("backendDetails").textContent =
     (cloud ? "Cloud · " : "Local · ") +
-    (data.backend || []).map((e) => e.name + " / " + e.model + (e.kind !== "chat_completions" ? " · " + e.reasoning + " reasoning · requested " + e.tier + " · " + e.transport + (e.max_output_tokens ? " · " + e.max_output_tokens + " output tokens max" : "") : "")).join(", ");
-  if (!(data.backend || []).length) $("backendLabel").textContent = "Local · no hint model configured; transcription only";
+    (data.backend || []).map((e) => e.name + " / " + e.model + (e.kind !== "chat_completions" ? " · " + e.reasoning + " reasoning · requested " + e.tier + " · " + e.transport + (e.max_output_tokens ? " · " + e.max_output_tokens + " brief / " + (e.coding_output_tokens || e.max_output_tokens) + " coding tokens max" : "") : "")).join(", ");
+  $("backendLabel").textContent = (data.backend || []).map(e => (e.kind === "chat_completions" ? "Local · " : e.kind === "chatgpt" ? "ChatGPT · " : "OpenAI API · ") + e.model).join(" / ") || "Transcription only";
+  const shared = data.microphone_enabled && data.microphone_context_enabled ? "Playback + microphone" : "Playback only";
+  $("sourceDisclosure").textContent = shared + (cloud ? " → cloud hints · audio local" : " → configured model · audio local");
+  $("cloudDisclosure").textContent = "Cloud selected: " + shared.toLowerCase() + " transcript context leaves this computer for the selected provider. Audio remains local. This also applies to Review now; replay and explicit summaries use playback only.";
   const seconds = data.elapsed;
   $("timer").textContent =
     String(Math.floor(seconds / 60)).padStart(2, "0") +
@@ -255,6 +339,13 @@ function render(data) {
     ({ el }) => el.getBoundingClientRect().bottom > historyTop,
   )?.el;
   const anchorTop = anchor?.getBoundingClientRect().top;
+  // When reading unchanged code, guidance/preview height changes above it must
+  // not move the line being read. A replacement falls back to the card anchor.
+  const oldCode = anchor?.querySelector(".answer pre");
+  const codeTop = oldCode?.getBoundingClientRect().top;
+  const readingCode = oldCode && codeTop <= historyTop &&
+    oldCode.getBoundingClientRect().bottom > historyTop;
+  const codeText = readingCode ? oldCode.textContent : null;
   const ids = new Set(merged.map((c) => c.id));
   for (const [id, entry] of cards)
     if (!ids.has(id)) {
@@ -262,7 +353,7 @@ function render(data) {
       cards.delete(id);
       manual.delete(id);
     }
-  merged.forEach((card, i) => cardElement(card, i, i >= merged.length - 2));
+  merged.forEach((card, i) => cardElement(card, i, i >= merged.length - 2, active && i === merged.length - 1));
   $("empty").hidden = !!merged.length;
   $("questionCount").textContent = merged.length
     ? merged.length +
@@ -272,22 +363,28 @@ function render(data) {
     : "Ready when you are";
   if (!following) unseen += merged.filter((c) => !previousIds.has(c.id)).length;
   if (following) {
+    if (!previousIds.has(merged.at(-1)?.id)) followFromStart = true;
     history.scrollTop = history.scrollHeight;
     const latest = cards.get(merged.at(-1)?.id)?.el;
     const useful = latest?.querySelector(".revision-preview:not([hidden])") || latest;
-    if (useful) {
+    if (useful && followFromStart) {
       // Long code/previous revisions must not scroll the newest TL;DR out of view.
       history.scrollTop += Math.min(0, useful.getBoundingClientRect().top - historyTop);
     }
     automaticScrollTop = history.scrollTop;
-  } else if (anchor?.isConnected)
-    history.scrollTop =
-      beforeTop + anchor.getBoundingClientRect().top - anchorTop;
-  else history.scrollTop = beforeTop;
+  } else if (anchor?.isConnected) {
+    const currentCode = anchor.querySelector(".answer pre");
+    history.scrollTop = beforeTop + (
+      readingCode && currentCode?.textContent === codeText
+        ? currentCode.getBoundingClientRect().top - codeTop
+        : anchor.getBoundingClientRect().top - anchorTop
+    );
+    automaticScrollTop = history.scrollTop;
+  } else history.scrollTop = beforeTop;
   $("latestButton").hidden = following;
   $("latestButton").textContent =
     (unseen ? unseen + " new · " : "") + "Return to latest ↓";
-  $("reviewButton").disabled = data.state !== "recording" || !data.transcript.length;
+  $("reviewButton").disabled = data.state !== "recording" || !data.playback_revision;
   if ($("transcriptPanel").open) {
     const t = $("transcript"),
       atBottom = t.scrollHeight - t.scrollTop - t.clientHeight < 40;
@@ -303,7 +400,7 @@ function render(data) {
               ":" +
               String(Math.floor(e.start % 60)).padStart(2, "0") +
               " · " +
-              e.source_name,
+              (e.source_kind === "microphone" ? "Microphone" : "Playback"),
           ),
           document.createTextNode(e.text),
         );
@@ -312,12 +409,18 @@ function render(data) {
     );
     t.scrollTop = atBottom ? t.scrollHeight : pos;
   }
-  $("provisional").textContent = Object.values(data.provisional)
-    .filter(Boolean)
-    .join("\n");
-  $("notice").textContent = data.notices.length
-    ? data.notices[data.notices.length - 1].message
-    : "";
+  $("provisional").textContent = [
+    ...Object.values(data.provisional).filter(Boolean).map(text => "Playback: " + text),
+    ...(mic.provisional ? ["Microphone: " + mic.provisional] : []),
+  ].join("\n");
+  const currentNotices = data.notices.filter((notice) => !notice.resolved);
+  const failure = data.unsaved_count ? "Unsaved content retained. Retry saving before exit."
+    : data.readable_error || microphonePreferenceError
+    || Object.values(data.status).find(value => /failed|exhausted|unavailable|context limit/i.test(value))
+    || (currentNotices.length ? currentNotices[currentNotices.length - 1].message : "")
+    || (data.microphone_enabled && ["unavailable", "quarantined"].includes(mic.state) ? mic.reason : "");
+  $("notice").textContent = failure || "";
+  $("notice").hidden = !failure;
 }
 history.addEventListener("scroll", () => {
   if (automaticScrollTop !== null && Math.abs(history.scrollTop - automaticScrollTop) < 1) return;
@@ -325,14 +428,18 @@ history.addEventListener("scroll", () => {
   following =
     history.scrollHeight - history.scrollTop - history.clientHeight < 55;
   if (following) {
+    // A deliberate scroll to the tail must remain there across status polls.
+    followFromStart = false;
     unseen = 0;
     $("latestButton").hidden = true;
   } else $("latestButton").hidden = false;
 });
 $("latestButton").onclick = () => {
   following = true;
+  followFromStart = true;
   unseen = 0;
   history.scrollTop = history.scrollHeight;
+  automaticScrollTop = history.scrollTop;
   $("latestButton").hidden = true;
 };
 async function action(path) {
@@ -397,10 +504,10 @@ async function openSaved(id) {
     const data = await api("sessions/" + encodeURIComponent(id));
     const detail = $("savedDetail");
     detail.replaceChildren();
-    const link = node("a", "", "Download playback transcript");
+    const link = node("a", "", "Download readable transcript");
     link.href = "/api/sessions/" + encodeURIComponent(id) + "/transcript";
     detail.append(
-      node("h3", "", "Captured playback / remote conversation"),
+      node("h3", "", data.metadata.microphone || data.events.some(e => e.source_kind === "microphone") ? "Captured Playback + Microphone" : "Captured playback / remote conversation"),
       link,
     );
     if (data.partial_tail)
@@ -422,7 +529,7 @@ async function openSaved(id) {
     latest.forEach((h) => {
       detail.append(node("b", "", h.question));
       const answer = node("div", "answer");
-      renderAnswer(answer, h.answer);
+      renderGuidance(answer, h);
       detail.append(answer);
     });
   } catch (error) {
@@ -581,3 +688,23 @@ $("cloudProvider").addEventListener("change", () => {
   $("cloudTransport").value = $("cloudProvider").value === "chatgpt" ? "websocket" : "http";
 });
 tierAvailability();
+
+$("includeMicrophone").addEventListener("change", async () => {
+  const enabled = $("includeMicrophone").checked;
+  microphonePreferenceError = "";
+  $("includeMicrophone").disabled = true;
+  try {
+    await api("microphone", "POST", {enabled});
+  } catch (error) {
+    microphonePreferenceError = error.message;
+  }
+  await poll();
+});
+
+$("useMicrophoneContext").addEventListener("change", async () => {
+  microphonePreferenceError = "";
+  $("useMicrophoneContext").disabled = true;
+  try { await api("microphone-context", "POST", {enabled: $("useMicrophoneContext").checked}); }
+  catch (error) { microphonePreferenceError = error.message; }
+  await poll();
+});

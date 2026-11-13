@@ -28,6 +28,8 @@ async def summarize(config, session_id):
     chunks = []
     current = ""
     for event in transcript_view(data["events"]):
+        if event.get("source_kind", "playback") != "playback":
+            continue
         line = f"[{event['start']:.1f}s] {event['source_name']}: {event['text']}\n"
         for offset in range(0, len(line), 6000):
             part = line[offset : offset + 6000]

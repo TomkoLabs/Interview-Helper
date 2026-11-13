@@ -1,135 +1,132 @@
 # Changelog
 
-## 0.1.12
+Current behavior is described in [the specification](PROJECT_SPEC.md). Historical
+measurements and their limits are consolidated in [validation](docs/VALIDATION.md).
+Documentation-only maintenance retains version 0.1.19 and unchanged runtime behavior.
 
-Restore the legacy 0.1.9 acceptance anchor omitted when moving machine-specific
-procedures to private documentation. Update portable release commands. Runtime,
-prompts, defaults and dependencies are identical to 0.1.11; preserve its tag/release.
+## 0.1.19 — stable answers and concise follow-ups, 2026-11-12
 
-## 0.1.11
+- Preserve main answers/code for microphone follow-ups while allowing explicit corrections
+  and meaningful playback constraints through the same validated inference lane.
+- Replace supporting notes together; keep one concise Latest follow-up in live/saved cards.
+- Preserve manual tail scrolling and trim finalized mic PCM before the six-second guard.
 
-- Added one-command setup/run with reusable pinned environment, secure missing-key
-  handling, local ASR preparation and preserved existing selections/private data.
-- Made fresh defaults consistently ordinary API; consolidated portable installation
-  docs while retaining validated optional integrations and legacy commands.
-- Included existing attribution/license notices in wheels; flagged provenance/history
-  review before any separate public publication. Pinned the previously unpinned
-  setuptools runtime dependency to the existing 79.0.1 version.
+## 0.1.18 — recovery and follow-ups, 2026-11-04
 
-Prefer the simplest correct readable implementation, subject to explicit performance
-requirements and supplied bounds. Keep one implementation, actual complexity/edge
-cases and at most one optimization bullet; later constraints refine the same card.
-Add paired baseline/optimization/bounds fixtures and effective-prompt routing checks.
-No runtime/protocol/model-setting changes or paid inference. See docs/SOLUTION_SELECTION_0.1.11.md.
+- Bound reader settling, verify cleaned links and debounce/back off device recovery.
+- Keep capture during brief ASR deferral; report timestamped outages and actual loss.
+- Separate default-off mic sharing from recording; bound context and clear it across
+  consent changes. Replay and summary remain playback-only.
+- Add a replaceable Latest follow-up, concise foundations and compact Session pulse.
 
-## 0.1.10
+## 0.1.17 — optional microphone transcript, 2026-10-29
 
-Consolidate the senior Java role, stable segment provenance, related follow-up semantics,
-TL;DR-first structured code answers and optional Review now. Keep new guidance separate
-from previous code until validation; safe literal code, bounded scrolling and rollback.
-Bound final inference grace and record unreviewed shutdown tails; preserve quarantine
-across sessions. Existing cloud defaults, output ceiling, audio, storage and configuration
-remain. Five final-prompt live cases cost $0.23892; sixth blocked before dispatch by the
-unchanged task reservation cap. See docs/LIVE_REVIEW_0.1.10.md for acceptance and limits.
+- Add default-off persisted microphone recording, stable physical input selection and
+  native PipeWire/WebRTC monitor AEC without routing changes or raw fallback.
+- Share one ASR model with playback priority, bounded mic state and visible gaps.
+- Save chronological source-labelled transcripts; add a collapsible transcript panel.
+  Model sharing was not yet supported in this version.
 
-## 0.1.9
+## 0.1.16 — upgrade freshness, 2026-10-26
 
-Review continuous verbatim committed speech with revision coverage, stable active-answer
-context and bounded model-selected topic boundaries. Remove local filler/dangling/repeated
-wording filtering and IGNORE deletion. Add pause/initial/maximum-delay triggers, final-flush
-coverage and no identical failed-snapshot replay. Accept up to three separate answers per
-batch with strict validation/rollback. Preserve audio, storage, layout and cloud settings.
-140 offline tests and small matched Sol replay; new usage-based cost $0.3059664 within
-both authorizations. See docs/LIVE_REVIEW_0.1.9.md for quality, timing and Kraken limits.
+- Invalidate only application bytecode on source-content changes before imports under
+  the runtime lock, covering install/start/direct run and archive-update instructions.
+- Fingerprint frontend assets, leave HTML/private APIs uncached, and preserve preferences.
 
-## 0.1.8
+## 0.1.15 — notebook polish, 2026-10-26
 
-Require concise model headings instead of raw ASR-fragment fallback; clarify mixed
-playback and evolving question semantics, retain active constraints and suppress
-obvious filler requests. Keep the notebook within the desktop viewport with independent
-scrolling. Default session data to Transcribed with verified, idempotent legacy migration.
-Join readable transcript fragments deterministically; preserve exact journals, visible
-errors and recovery. Offline regressions and synthetic browser checks only; no paid
-benchmark, new soak or ASR/cloud/audio retuning. See docs/NOTEBOOK_0.1.8.md.
+- Remove repeated retained-code/language captions while preserving conflict/failure notices.
+- Make block code more compact without changing prose defaults or paused reading.
 
+## 0.1.14 — readable coding references, 2026-10-26
 
-## 0.1.7 — portable patch update procedure
+- Prefer clear Java references with explicit assumptions and accurately labelled scaffolds.
+- Give initial substantial implementation requests coding capacity; preserve profile settings.
+- Resolve historical failure notices after successful review and anchor unchanged code.
 
-- Correct the update command to use the declared isolated build backend, supporting fresh Python 3.13 venvs without setuptools. Runtime/model dependencies remain unchanged; the pinned build backend may be fetched.
-- Includes the same tested 0.1.6 playback-discovery repair. Preserve the intermediate 0.1.6 tag/release.
+## 0.1.13 — retained coding tasks
+
+- Keep a stable parent, source-linked requirements and separate validated reference code.
+- Add preserve/replace/invalidate/clear semantics; never assume access to candidate code.
+- Use a bounded 2,048-token coding allowance with the standard 1,024 brief cap; preserve
+  custom caps and subscription restrictions. Keep older journals readable.
+
+## 0.1.12 — documentation correction
+
+Restore an acceptance link and correct portable update instructions. Runtime, prompts,
+defaults and dependencies are unchanged from 0.1.11.
+
+## 0.1.11 — one-command startup and solution selection
+
+- Reuse a pinned environment, privately configure missing API keys, prepare local ASR
+  and preserve existing selections/data through one-command startup.
+- Align fresh defaults on ordinary API; include all notices in wheels and pin setuptools.
+- Prefer the simplest suitable readable implementation, actual complexity and edge cases;
+  explicit bounds/optimization requirements override an inadequate baseline.
+
+## 0.1.10 — structured live review
+
+Consolidate the senior Java role, stable segment provenance, related follow-ups,
+TL;DR-first code answers and optional Review now. Preserve validated code while new
+guidance streams, bound final inference grace and record unreviewed shutdown tails.
+
+## 0.1.9 — continuous review
+
+Review verbatim committed speech with revision coverage and retained scenario context.
+Remove local filler/dangling/repeated-word filters and IGNORE deletion. Add bounded
+pause/initial/maximum-delay triggers and up to three answers per validated batch.
+
+## 0.1.8 — question assembly and saved transcripts
+
+Require concise model headings instead of raw fragment fallbacks. Keep the notebook
+within the viewport with independent scrolling. Default storage to Transcribed, add
+verified legacy migration and deterministic readable transcripts alongside exact journals.
+
+## 0.1.7 — portable update procedure
+
+Use the declared isolated build backend for updates, including fresh Python 3.13
+environments without setuptools. Keep the 0.1.6 playback repair and runtime dependencies.
 
 ## 0.1.6 — PipeWire playback discovery
 
-- Recover Pulse module indices from short output by matching complete JSON module names/arguments, including multiline native PipeWire records. Reject mismatches, stray data and duplicate/conflicting identities.
-- Keep native SPA arguments out of shell parsing; normalize confirmed monitor names/indices for forwarding deduplication without using PipeWire object IDs or admitting microphones.
-- Surface the failed pactl/discovery stage in session status and diagnostics while keeping retry and saving behavior.
-- 116 tests pass, including sanitized pactl 17 / PipeWire 1.4.2 regressions; isolated real PulseAudio capture/hotplug/dedup checks pass. Actual Kraken capture remains unverified. No paid benchmark or new endurance soak.
+Reconcile JSON module names/arguments with indexed multiline short output. Validate
+identities, monitor relationships and deduplication without admitting microphones or
+conflating PipeWire object IDs with Pulse indices. Surface the failed discovery stage.
 
-## 0.1.5 — verified deployment configuration
+## 0.1.5 — persistent deployment settings
 
-- Add a key-free Kraken profile: ordinary API Sol low / Ultrafast / HTTP, 1,024 output tokens; retain explicit local fallback.
-- Persist credential-free connection preferences across sessions/restarts and align the UI API output ceiling with the tested profile.
-- Reject paid profiles in legacy evaluation scripts so persisted cloud choices cannot bypass benchmark accounting.
-- Keep the playback-only summary prompt when a persisted cloud connection is used by the CLI.
-- Separate creation echoes from terminal effective-tier metadata; expose requested settings without credentials.
-- Verify evaluation-only budget isolation, installation/key setup, session duration/bounds and simulated socket recovery. 101 CPU regressions and both-theme UI checks pass; a 10,803-second synthetic soak saved/recovered all 2,157 events through 126 simulated provider failures, with no paid calls.
+Add a portable key-free Sol low / Ultrafast / HTTP profile with a 1,024 output cap.
+Persist credential-free provider choices and separate requested/effective tier metadata.
+Keep evaluation budgeting independent of sessions and reject paid profiles in legacy tools.
 
+## 0.1.4 — broader paid comparison
 
-## 0.1.4 — funded comparison and coalesced-delta timing
+Recommend Sol low / Ultrafast / HTTP from matched quality/latency results. Validate
+ordinary-API WebSocket reuse/reconnect and retain wrong answers separately from protocol
+success. Fix first-answer telemetry for coalesced header/text deltas.
 
-- Complete the authorized paid comparison after a fresh Standard probe, preserving the cumulative US$5 ledger and prior errors. Recommend Sol low Ultrafast/HTTP from broader quality and latency evidence.
-- Verify ordinary API WebSocket reuse, bounded deltas and clean reconnect; retain its observed wrong answer separately from protocol reliability.
-- Fix first-answer-content telemetry when header and answer arrive in one provider delta; strict parsing and useful-record publication are unchanged. Three offline regressions reproduce and cover the bug.
-- 81 CPU checks; measured costs, quality and remaining limits in [0.1.4 validation](docs/QUALITY_0.1.4.md).
+## 0.1.3 — cloud transport and recovery
 
-## 0.1.3 — measured cloud responsiveness and reliable recovery
+Instrument response events, validated content, usage, tiers and UI acknowledgment.
+Drain HTTP for reuse; add bounded persistent WebSocket continuation, rotation and safe
+recovery. Compact cloud headers, push hint notifications and retain timeout quarantine.
+Add backend-only API key setup, processing tiers and a cumulative evaluation ledger.
 
-- Measure transport events, output/answer deltas, validated records, browser acknowledgment, completion, usage and effective tiers. Drain HTTP to preserve reuse and failure usage.
-- Add persistent Responses WebSocket, bounded connection-local transcript deltas, token/55-minute rotation, explicit rejection recovery and safe HTTP handshake fallback. Keep uncertain-request quarantine scoped to cloud profiles.
-- Compact cloud headers use application question state; preserve strict records, stale-response rollback and full qualifiers. Push hint notifications reduce polling delay.
-- Explicit backend-only API key file, supported paid tier selectors and a durable US$5 benchmark ledger. No billing or infrastructure changes.
-- Broader matched subscription results and limited real paid tier evidence; paid comparison remains pending the user’s billing check. See [validation](docs/QUALITY_0.1.3.md).
+## 0.1.2 — compact workspace and optional cloud
 
-## 0.1.2 — compact workspace, broader quality and optional cloud
+Remove the decorative intro; retain controls/themes/history. Broaden quality rubrics,
+separating incomplete/wrong answers from failures. Add app-owned ChatGPT registration,
+backend credentials, account catalog and Responses streaming with explicit disclosure.
+Enforce preview restrictions and keep ordinary API billing separate.
 
-- Remove the decorative intro and its layout/styles; retain IH controls, themes,
-  session clock, status, streaming and history. Idle hints no longer misleadingly
-  claim to be unconfigured before a session starts.
-- Add eight frozen engineering cases and broader coder/primary comparisons at
-  short/longer context. Separate full/partial/wrong from protocol/missing answers.
-- Optional app-owned ChatGPT registration, backend-only rotating credentials,
-  account catalog and Responses streaming; explicit cloud transcript disclosure.
-- Enforce preview restrictions, provide a separate API-key path, retain local
-  startup defaults and avoid cloud idle keepalives or automatic billing fallback.
-- Correct post-consent home navigation while retaining cross-site API guards.
-  See [quality/validation](docs/QUALITY_0.1.2.md) and [cloud setup](docs/CLOUD.md).
+## 0.1.1 — themes and latency validation
 
-## 0.1.1 — themes, compact brand and measured latency
-
-- Dark-first/light toggle with early initialization, accessible keyboard state and
-  one durable browser theme preference; sessions and history are unaffected.
-- Visible IH name in the header, tab, footer, CLI description and playback client.
-- Skip draining race peers and discard superseded work before dispatch, preventing
-  an obsolete-request FIFO; retain timeout quarantine and separate queue timing.
-- Frozen technical rubrics, balanced repeated real-model evaluation and longer
-  playback context. Retain low reasoning after faster settings failed question
-  handling/technical constraints; no reliable sub-second or GPU/audio claim.
-- 44 CPU regressions and actual desktop/mobile browser checks; details in
-  [the 0.1.1 validation report](docs/LATENCY_0.1.1.md).
+Add persistent dark/light themes and compact branding. Skip busy race peers and obsolete
+pending work; retain quarantine and queue timing. Add frozen technical rubrics and longer
+context comparisons without trading away correctness for a sub-second target.
 
 ## 0.1.0 — initial release
 
-- Automatic playback-monitor capture with independent source state, supported
-  forwarding-chain deduplication, hotplug reconciliation and visible activity/gaps.
-- Pinned large-v3-turbo/faster-whisper LocalAgreement streaming with explicit CPU
-  or CUDA execution, stable/provisional text, VAD and bounded queues/buffers.
-- Durable playback journals, separate hint/latency records, interrupted-session
-  recovery, readable exports and optional post-session summaries.
-- Semantic WAIT/IGNORE/NEW/UPDATE controller, retained scenario context, inspectable
-  prompts, single/racing explicit endpoints and bounded stale-work handling.
-- Localhost browser workspace with readable card history, progressive hints,
-  expandable answers, transcript, session status, archive and safe text rendering.
-- Isolated install/launch/diagnostics, CPU tests, real gateway benchmarks, recorded
-  audio replay, isolated PulseAudio acceptance and wall-clock soak tooling.
-
-GPU/physical desktop and live meeting acceptance remain target-hardware work.
+Playback-monitor discovery/deduplication, LocalAgreement streaming, durable journals,
+interrupted-session recovery, semantic hint control, bounded scheduling, localhost
+notebook/history, isolated setup, diagnostics and offline/isolated acceptance tooling.

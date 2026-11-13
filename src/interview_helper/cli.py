@@ -81,6 +81,8 @@ async def replay(config, path, speed=1):
     last = 0
     try:
         for record in records:
+            if record.get("source_kind", "playback") != "playback":
+                continue
             delay = max(0, record["at"] - last) / speed
             await asyncio.sleep(delay)
             session.ingest(

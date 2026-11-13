@@ -15,6 +15,7 @@ if [[ "$mode" == --gpu ]]; then
   nvidia-smi --query-gpu=name,driver_version --format=csv,noheader
 fi
 [[ -d .venv ]] || "$python" -m venv .venv
+.venv/bin/python scripts/refresh_bytecode.py
 if [[ "${2:-}" != --if-needed ]] || ! .venv/bin/python scripts/environment_ready.py "$mode"; then
   .venv/bin/python -m pip install -r requirements.lock
   if [[ "$mode" == --gpu ]]; then .venv/bin/python -m pip install -r requirements-cuda.txt; fi

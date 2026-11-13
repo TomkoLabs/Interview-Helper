@@ -20,6 +20,9 @@ class Session:
         self.store = None
         self.controller = None
         self.recognizer = None
+        self.microphone_worker = None
+        self.microphone_state = {"state": "idle"}
+        self.sequence = 0
         self.capture_task = None
         self.start_task = None
         self.end_task = None
@@ -65,6 +68,9 @@ class Session:
                     "transport": e.transport,
                     "reasoning": e.parameters.get("reasoning_effort", "low"),
                     "max_output_tokens": e.parameters.get("max_output_tokens"),
+                    "coding_output_tokens": self.config.coding_output_tokens
+                    if e.parameters.get("max_output_tokens") == 1024
+                    else e.parameters.get("max_output_tokens"),
                     "account": Path(e.oauth_file).stem if e.backend == "chatgpt" else "",
                 }
                 for e in (
@@ -74,7 +80,16 @@ class Session:
                 )
             ],
             "devices": list(self.devices.values()),
-            "transcript": list(self.transcript),
+            "microphone_enabled": self.config.microphone,
+            "microphone_context_enabled": self.config.microphone_context,
+            "shared_sources": ["playback", "microphone"]
+            if self.config.microphone and self.config.microphone_context
+            else ["playback"],
+            "microphone": self.microphone_state,
+            "playback_revision": self.revision,
+            "transcript": sorted(
+                self.transcript, key=lambda e: (e["start"], e.get("sequence", e["revision"]))
+            ),
             "provisional": self.provisional,
             "drafts": list(self.drafts.values()),
             "cards": self.controller.cards[-200:] if self.controller else [],
@@ -82,9 +97,20 @@ class Session:
             "unsaved_count": len(self.unsaved),
         }
 
-    def notice(self, message):
-        if not self.notices or self.notices[-1]["message"] != message:
-            self.notices.append({"time": now(), "message": message})
+    def notice(self, message, kind="general"):
+        if (
+            not self.notices
+            or self.notices[-1]["message"] != message
+            or self.notices[-1].get("resolved")
+        ):
+            self.notices.append({"time": now(), "message": message, "kind": kind})
+
+    def model_status(self, status):
+        self.status["model"] = status
+        if status in {"ready", "ignore", "wait"}:
+            for notice in self.notices:
+                if notice.get("kind") == "hint_failure":
+                    notice["resolved"] = True
 
     async def publish(self, kind, data):
         self.hint_revision += 1
@@ -100,8 +126,11 @@ class Session:
             self.drafts = {
                 k: v for k, v in self.drafts.items() if v["request_id"] != data["request_id"]
             }
-        if kind == "discard" and data.get("error"):
-            self.notice("Hint failed: " + data["error"] + "; previous answer retained")
+        if kind == "discard" and data.get("error") and not data.get("stale"):
+            self.notice(
+                "Previous hint attempt failed: " + data["error"] + "; previous answer retained",
+                kind="hint_failure",
+            )
 
     def acknowledge_visible(self, request_id):
         if (
@@ -154,6 +183,14 @@ class Session:
         self.status["save"] = "saved; end session then start again"
 
     def start(self, replay=False):
+        if (
+            self.recognizer
+            and getattr(self.recognizer, "microphone_job", None)
+            and not self.recognizer.microphone_job.done()
+        ):
+            raise ValueError(
+                "Previous microphone ASR is still draining; wait before starting another session"
+            )
         if self.state not in {"idle", "ended", "failed"} or self.unsaved:
             raise ValueError("End the current session and save pending content first")
         if self.store and not self.store.closed:
@@ -166,6 +203,8 @@ class Session:
         self.errors.clear()
         self.notices.clear()
         self.revision = 0
+        self.sequence = 0
+        self.microphone_state = {"state": "idle"}
         self.started = time.monotonic()
         self.ended_elapsed = None
         self.store = SessionStore(
@@ -174,6 +213,17 @@ class Session:
                 "version": __version__,
                 "hint_revision": self.hint_revision,
                 "mode": "transcript replay" if replay else "live playback",
+                "microphone": self.config.microphone and not replay,
+                "microphone_context": self.config.microphone
+                and self.config.microphone_context
+                and not replay,
+                "scope": (
+                    "playback + microphone; live hints may use both"
+                    if self.config.microphone_context
+                    else "playback + local microphone; hints use playback only"
+                )
+                if self.config.microphone and not replay
+                else "playback only; microphone excluded",
                 "asr": {
                     "model": self.config.model,
                     "device": self.config.device,
@@ -190,8 +240,11 @@ class Session:
             gateway,
             self.publish,
             lambda e: self.save(e, True),
-            lambda s: self.status.update(model=s),
+            self.model_status,
             observe=lambda e: self.save(e, True),
+            microphone_context=self.config.microphone
+            and self.config.microphone_context
+            and not replay,
         )
         self.state = "recording" if replay else "starting"
         self.status.update(
@@ -216,6 +269,11 @@ class Session:
             self.status["asr"] = "ready"
             self.capture_task = asyncio.create_task(self._capture_loop())
             self.warm_task = asyncio.create_task(self._warm_models())
+            if self.config.microphone:
+                from .microphone import MicrophoneWorker
+
+                self.microphone_worker = MicrophoneWorker(self)
+                self.microphone_worker.task = asyncio.create_task(self.microphone_worker.run())
         except Exception as exc:
             self.status["asr"] = "failed: " + type(exc).__name__
             self.notice(str(exc))
@@ -350,16 +408,22 @@ class Session:
             await asyncio.sleep(2)
         await self._stop_capture()
 
-    def ingest(self, source, label, text, start, end, final=False):
+    def ingest(self, source, label, text, start, end, final=False, *, source_kind="playback"):
         if not text.strip():
             return
         if self.state not in {"recording", "stopping"}:
             raise RuntimeError("Session is not accepting transcript")
-        self.revision += 1
+        if source_kind not in {"playback", "microphone"}:
+            raise ValueError("Unknown transcript source kind")
+        self.sequence += 1
+        if source_kind == "playback":
+            self.revision += 1
         event = {
             "type": "transcript",
             "segment_id": uuid.uuid4().hex,
             "revision": self.revision,
+            "sequence": self.sequence,
+            "source_kind": source_kind,
             "source": source,
             "source_name": label,
             "start": start,
@@ -370,7 +434,10 @@ class Session:
         }
         self.save(event)
         self.transcript.append(event)
-        self.controller.ingest(event)
+        if source_kind == "playback":
+            self.controller.ingest(event)
+        else:
+            self.controller.ingest_microphone(event)
 
     async def _stop_capture(self):
         for capture, _ in self.captures.values():
@@ -391,6 +458,9 @@ class Session:
         try:
             if self.start_task and not self.start_task.done():
                 await self.start_task
+            if self.microphone_worker:
+                await self.microphone_worker.stop()
+                self.microphone_worker = None
             if self.capture_task:
                 await self.capture_task
             else:

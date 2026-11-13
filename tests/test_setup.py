@@ -98,6 +98,7 @@ def test_installer_reuses_environment_and_preserves_private_state(tmp_path):
     binary.parent.mkdir(parents=True)
     binary.write_text("""#!/bin/sh
 case "$*" in
+  *refresh_bytecode.py*) exit 0 ;;  # Real invalidation is covered in test_upgrade_cache.py.
   *environment_ready.py*) test -f .local/fixture-installed ;;
   *) echo "$*" >> .local/fixture-pip; touch .local/fixture-installed ;;
 esac

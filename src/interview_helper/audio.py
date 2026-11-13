@@ -276,19 +276,56 @@ async def discover(include=(), exclude=()):
         ) from exc
 
 
+async def stop_process(process):
+    if process and process.returncode is None:
+        try:
+            process.terminate()
+        except ProcessLookupError:
+            return
+        try:
+            await asyncio.wait_for(process.wait(), 1)
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+
+
 class Capture:
     """One process/source. A full 30-second queue stops capture with a visible gap."""
 
-    def __init__(self, monitor, on_status, start_time):
+    def __init__(self, monitor, on_status, start_time, *, microphone=False):
         self.monitor = monitor
         self.on_status = on_status
         self.start_time = start_time
-        self.queue = asyncio.Queue(maxsize=300)
+        self.microphone = microphone
+        self.queue = asyncio.Queue(maxsize=20 if microphone else 300)
         self.process = None
         self.task = None
         self.stopping = False
+        self.generation = 0
+        self.dropped_seconds = 0.0
+        self.last_audio_at = None
 
     async def start(self):
+        if self.microphone:
+            self.process = await asyncio.create_subprocess_exec(
+                "pw-cat",
+                "--record",
+                "--raw",
+                "--target=" + self.monitor.name,
+                "--rate=16000",
+                "--channels=1",
+                "--format=f32",
+                "--latency=100ms",
+                "--properties="
+                + '{ node.name = "'
+                + self.monitor.name
+                + '-reader" node.dont-fallback = true node.dont-reconnect = true }',
+                "-",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            self.task = asyncio.create_task(self._read())
+            return
         self.process = await asyncio.create_subprocess_exec(
             "parec",
             "--device=" + self.monitor.name,
@@ -309,12 +346,26 @@ class Capture:
             while not self.stopping:
                 data = await self.process.stdout.readexactly(6400)  # 100 ms mono float32
                 timestamp = time.monotonic() - self.start_time - 0.1
+                self.last_audio_at = time.monotonic()
                 block = np.frombuffer(data, dtype="<f4").copy()
                 try:
                     self.queue.put_nowait((max(0, timestamp), block))
                 except asyncio.QueueFull:
+                    if self.microphone:
+                        dropped = self.queue.qsize() * 0.1
+                        self.discard_buffer()
+                        self.dropped_seconds += dropped
+                        self.queue.put_nowait((max(0, timestamp), block))
+                        self.on_status(
+                            self.monitor.name,
+                            "gap",
+                            "Microphone backlog: buffered audio dropped; continuity reset",
+                        )
+                        continue
                     self.on_status(
-                        self.monitor.name, "failed", "ASR backlog exceeded 30s; capture stopped"
+                        self.monitor.name,
+                        "failed",
+                        f"ASR backlog exceeded {self.queue.maxsize / 10:g}s; capture stopped",
                     )
                     break
         except asyncio.IncompleteReadError as exc:
@@ -330,12 +381,21 @@ class Capture:
         finally:
             if self.process.returncode is None:
                 self.process.terminate()
-                await self.process.wait()
+                try:
+                    await asyncio.wait_for(self.process.wait(), 1)
+                except TimeoutError:
+                    self.process.kill()
+                    await self.process.wait()
             self.stopping = True
+
+    def discard_buffer(self):
+        while not self.queue.empty():
+            self.queue.get_nowait()
+        self.generation += 1
 
     async def stop(self):
         self.stopping = True
         if self.process and self.process.returncode is None:
-            self.process.terminate()
-        if self.task:
+            await stop_process(self.process)
+        if self.task and self.task is not asyncio.current_task():
             await self.task

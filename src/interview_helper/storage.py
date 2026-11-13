@@ -47,26 +47,55 @@ def transcript_view(records):
     for e in records:
         if e["type"] == "transcript":
             latest[e["segment_id"]] = e
-    return sorted(latest.values(), key=lambda e: (e["start"], e["revision"]))
+    return sorted(latest.values(), key=lambda e: (e["start"], e.get("sequence", e["revision"])))
 
 
 SCOPE = "Captured playback / remote conversation (microphone excluded)\n\n"
 
 
+COMBINED_SCOPE = "Playback + Microphone (source labels, not speaker identification; microphone excluded from AI hints)\n\n"
+
+
+SHARED_SCOPE = "Playback + Microphone (audio paths, not speaker identification; microphone context enabled for live hints)\n\n"
+
+
 class ReadableText:
     """Bounded paragraph state; no wording changes or inferred speaker labels."""
 
-    def __init__(self):
+    def __init__(self, combined=False):
+        self.combined = combined
         self.previous = None
         self.characters = 0
         self.paragraph_start = 0
+        self.legacy_mic_gap = None
 
     def append(self, event):
-        if event["type"] == "gap":
+        if event["type"] == "outage":
             self.previous = None
-            return "\n\n[CAPTURE GAP] " + event["reason"] + "\n\n"
+            mins, secs = divmod(event["at"], 60)
+            phase = {"start": "OUTAGE START", "recovered": "RECOVERED", "unresolved": "UNRESOLVED"}[
+                event["phase"]
+            ]
+            return (
+                f"\n\n[{int(mins):02d}:{secs:05.2f} · Microphone · {phase}] {event['reason']}\n\n"
+            )
+        if event["type"] == "gap":
+            if event.get("source_kind") == "microphone":
+                if event["reason"] == self.legacy_mic_gap:
+                    return ""
+                self.legacy_mic_gap = event["reason"]
+            self.previous = None
+            return (
+                "\n\n[CAPTURE GAP"
+                + (" · Microphone" if event.get("source_kind") == "microphone" else "")
+                + "] "
+                + event["reason"]
+                + "\n\n"
+            )
         if event["type"] != "transcript":
             return ""
+        if event.get("source_kind") == "microphone":
+            self.legacy_mic_gap = None
         text = event["text"].strip()
         if not text:
             return ""
@@ -83,6 +112,10 @@ class ReadableText:
         if boundary:
             mins, secs = divmod(event["start"], 60)
             prefix = ("\n\n" if previous else "") + f"[{int(mins):02d}:{secs:05.2f}] "
+            if self.combined:
+                prefix += (
+                    "Microphone" if event.get("source_kind") == "microphone" else "Playback"
+                ) + ": "
             self.characters = 0
             self.paragraph_start = event["start"]
         else:
@@ -92,17 +125,25 @@ class ReadableText:
         return prefix + text
 
 
-def readable(records):
+def readable(records, combined=False, shared=False):
     # Latest revisions are authoritative. Gaps stay in chronological context.
-    events = transcript_view(records) + [e for e in records if e["type"] == "gap"]
+    events = transcript_view(records) + [e for e in records if e["type"] in {"gap", "outage"}]
     events.sort(key=lambda e: e.get("start", e.get("at", float("inf"))))
-    view = ReadableText()
-    return SCOPE + "".join(view.append(e) for e in events).rstrip() + "\n"
+    combined = combined or any(e.get("source_kind") == "microphone" for e in records)
+    view = ReadableText(combined)
+    return (
+        (SHARED_SCOPE if combined and shared else COMBINED_SCOPE if combined else SCOPE)
+        + "".join(view.append(e) for e in events).rstrip()
+        + "\n"
+    )
 
 
 def rebuild_readable(path):
     records, partial = read_journal(path / "transcript.jsonl")
-    text = readable(records)
+    metadata = json.loads((path / "metadata.json").read_text())
+    text = readable(
+        records, metadata.get("microphone", False), metadata.get("microphone_context", False)
+    )
     if partial:
         text += "\n[RECOVERY] Incomplete final journal record excluded.\n"
     temporary = path / "transcript.txt.tmp"
@@ -138,8 +179,18 @@ class SessionStore:
         self.events = self._open("transcript.jsonl")
         self.hints = self._open("hints.jsonl")
         self.text = self._open("transcript.txt")
-        self.text.write(SCOPE.encode())
-        self.readable_state = ReadableText()
+        self.combined = self.metadata.get("microphone", False)
+        self.text.write(
+            (
+                SHARED_SCOPE
+                if self.combined and self.metadata.get("microphone_context")
+                else COMBINED_SCOPE
+                if self.combined
+                else SCOPE
+            ).encode()
+        )
+        self.readable_state = ReadableText(self.combined)
+        self.last_start = -1
         self.view_error = None
         self._sync(self.text)
         self.closed = False
@@ -168,6 +219,18 @@ class SessionStore:
             raise
         if not hint:
             try:
+                # Independent streams can finalize out of order. Rebuild the derived
+                # view only then; the fsynced append-only journal stays authoritative.
+                start = event.get("start", event.get("at", self.last_start))
+                if start < self.last_start:
+                    self.text.close()
+                    try:
+                        rebuild_readable(self.path)
+                    finally:
+                        self.text = (self.path / "transcript.txt").open("ab", buffering=0)
+                    self.readable_state = ReadableText(self.combined)
+                    return
+                self.last_start = start
                 line = self.readable_state.append(event).encode()
                 if self.text.write(line) != len(line):
                     raise OSError("Short transcript view write")
@@ -207,7 +270,9 @@ class SessionStore:
         return {
             "metadata": metadata,
             "transcript_path": str(path / "transcript.txt"),
-            "readable": readable(events),
+            "readable": readable(
+                events, metadata.get("microphone", False), metadata.get("microphone_context", False)
+            ),
             "events": events,
             "hints": hints,
             "partial_tail": partial or partial_hint,

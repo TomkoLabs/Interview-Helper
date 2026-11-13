@@ -57,3 +57,8 @@ Whisper weights download separately from their named model repositories. Review 
 selected model card/license before redistributing weights. Optional CUDA/cuDNN
 packages have NVIDIA's own terms; drivers, GPU libraries and model weights are not
 bundled. The project license grants no rights over those separate assets.
+
+Optional microphone AEC uses the system-installed PipeWire native echo-cancel module
+and its WebRTC audio-processing SPA library. These are not vendored, downloaded or
+redistributed by IH; retain their distribution-provided licensing when packaging an
+operating-system environment. No custom echo-cancellation algorithm is bundled.

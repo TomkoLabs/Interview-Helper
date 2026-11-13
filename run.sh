@@ -6,6 +6,11 @@ mkdir -p .local
 exec 9>.local/runtime.lock
 flock -sn 9 || { echo 'Installation is in progress.' >&2; exit 1; }
 [[ -x .venv/bin/python ]] || { echo 'Run ./install.sh first.' >&2; exit 1; }
+if ! .venv/bin/python scripts/refresh_bytecode.py --check; then
+  flock -xn 9 || { echo 'Stop Interview Helper before refreshing updated source.' >&2; exit 1; }
+  .venv/bin/python scripts/refresh_bytecode.py
+  flock -sn 9 || { echo 'Installation is in progress.' >&2; exit 1; }
+fi
 cuda_libs="$(.venv/bin/python -c 'import glob; print(":".join(glob.glob(".venv/lib/python*/site-packages/nvidia/*/lib")))')"
 export LD_LIBRARY_PATH="${cuda_libs}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec .venv/bin/python -m interview_helper "$@"

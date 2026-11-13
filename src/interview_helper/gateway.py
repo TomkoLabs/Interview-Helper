@@ -75,14 +75,32 @@ class Gateway:
         return [m["id"] for m in await self.model_choices(endpoint)]
 
     def payload(self, endpoint, messages):
+        # Application-owned capacity hint, not a second model/classifier request.
+        capacity = {}
+        if messages:
+            try:
+                capacity = json.loads(messages[-1]["content"]).get("RESPONSE_CAPACITY", {})
+            except (ValueError, AttributeError, TypeError):
+                pass
+        if not isinstance(capacity, dict):
+            capacity = {}
+        coding_limit = capacity.get("coding_tokens", 2048)
+        coding = (
+            capacity.get("style") == "coding"
+            and type(coding_limit) is int
+            and 1024 <= coding_limit <= 3072
+        )
         if endpoint.backend == "chat_completions":
-            return {
+            payload = {
                 "model": endpoint.model,
                 "messages": messages,
                 "stream": True,
                 "max_tokens": 1024,
                 **endpoint.parameters,
             }
+            if coding and payload["max_tokens"] == 1024:
+                payload["max_tokens"] = coding_limit
+            return payload
         if endpoint.compact:
             messages = [dict(m) for m in messages]
             messages[0]["content"] = self.compact_prompt
@@ -107,6 +125,8 @@ class Gateway:
             payload["instructions"] = instructions
         if "max_output_tokens" in endpoint.parameters:
             payload["max_output_tokens"] = endpoint.parameters["max_output_tokens"]
+            if coding and payload["max_output_tokens"] == 1024 and endpoint.backend == "openai_api":
+                payload["max_output_tokens"] = coding_limit
         if "service_tier" in endpoint.parameters:
             payload["service_tier"] = endpoint.parameters["service_tier"]
         return payload
@@ -137,6 +157,9 @@ class Gateway:
             mark("dispatch")
             self.status(endpoint.name, "generating")
             payload = self.payload(endpoint, messages)
+            output_limit = payload.get("max_output_tokens", payload.get("max_tokens"))
+            if output_limit is not None:
+                outcome.diagnostics["effective_output_limit"] = output_limit
             try:
                 failure_key = self.failure_key(endpoint)
                 if failure_key in self.quarantined:
@@ -339,6 +362,14 @@ class Gateway:
                                         "subscription_sharing_unsupported_capability",
                                     }
                                     outcome.diagnostics["terminal"] = kind
+                                    reason = (
+                                        event.get("response", {}).get("incomplete_details") or {}
+                                    ).get("reason")
+                                    if reason in {"max_output_tokens", "content_filter"}:
+                                        outcome.diagnostics["incomplete_reason"] = reason
+                                        protocol_error = ProtocolError(
+                                            "Responses incomplete: " + reason
+                                        )
                                     if code in known:
                                         outcome.diagnostics["code"] = code
                                         self.paused[failure_key] = (

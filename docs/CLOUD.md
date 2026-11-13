@@ -5,19 +5,31 @@ Integration evidence dated October 14, 2026; setup revised October 15. Local pla
 restarts in a credential-free backend preference. A saved local choice overrides
 a cloud TOML default. No automatic fallback between subscription and paid credentials occurs.
 
+From 0.1.18, **Use microphone context for hints** is independent default-off consent.
+When recording and sharing are both enabled, live hints and Review now send bounded
+labelled microphone support alongside playback; audio stays local. A session boundary
+clears all derived and connection-local context before a sharing change. Saved-session
+replay and explicit summaries remain playback-only. [Bounds and limits](../PROJECT_SPEC.md#review-scheduling-and-context).
+
 The recommended paid cloud profile is **GPT-6.1 Sol / low / Ultrafast / HTTP**.
 The completed bounded comparison supports this choice; WebSocket remains experimental
 because its smaller faster set included a wrong technical qualifier. The optional
 subscription trial remains GPT-6 Luna / low / WebSocket. These are recommendations,
-not speed guarantees; only a fresh configuration selects paid cloud by default. Read [0.1.4 results](QUALITY_0.1.4.md).
+not speed guarantees; only a fresh configuration selects paid cloud by default. Read [matched paid results](VALIDATION.md#paid-cloud-comparison).
+
+From 0.1.19, shared microphone uncertainty normally updates only the Latest follow-up;
+playback constraints and explicit independent error corrections can still change the main
+answer. Consent, context bounds, profiles and token allowances are unchanged. A small
+synthetic Standard-tier check is reported separately from latency benchmarks. [Evidence](VALIDATION.md#current-answer-and-microphone-checks).
 
 ## App-owned ChatGPT sign-in
 
 Official [overview](https://developers.openai.com/siwc/token-sharing-open-source) and
 [private-client sessions](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)
 support this private locally hosted app without repository publication. Eligibility
-is decided for the actual account/workspace. Development-account consent, JWT identity/scope, model catalog and inference were
-verified for Luna and Sol. This does not establish access for another account.
+is decided for the actual account/workspace. The October 14 integration checks verified
+consent, JWT identity/scope, catalog and inference for Luna and Sol on one account. This does not establish current access
+for another account; provider eligibility and contracts can change.
 
 1. Run IH and open **Model connection** while no session is active. Choose a saved
    account or **New account / workspace**, then **Continue with ChatGPT**.
@@ -62,10 +74,21 @@ mix credential sources accidentally. No browser key-entry/storage mechanism exis
 
 Choose **OpenAI API key · separate API billing**, load models, then choose Standard,
 Fast or Ultrafast. Only supported Sol models accept Ultrafast here. The app sends the
-requested tier and records the **effective terminal response tier**; the Session
-pulse labels the selection as requested, while completed cards show effective tier.
+requested tier and records the **effective terminal response tier**; Session details
+labels the selection as requested, while completed cards show effective tier.
 A 200 response or response.created echo is not proof of successful processing.
-The API UI profile now uses the tested 1,024-token output ceiling, including reasoning.
+The API UI profile uses the historically tested 1,024-token brief output ceiling,
+including reasoning. From 0.1.13, substantive coding requests use a default 2,048-token
+allowance when the selected endpoint has the standard 1,024 cap. Other explicit endpoint
+caps remain unchanged. Optional top-level `coding_output_tokens = 1024` keeps the old
+ceiling for every request; the validated range is 1024–3072. Local chat-completions
+requests with a 1024 default follow the same rule. Subscription requests never gain
+an unsupported `max_output_tokens` field; their prompt length target is not enforcement.
+Effective request limits appear in review diagnostics. The new allowance increases
+potential output cost/latency. The [coding evaluation](VALIDATION.md#extended-coding-checks)
+includes six bounded Standard-tier responses, separate from Ultrafast latency measurements. First-request
+capacity uses explicit implementation intent or substantial pending wording; active coding
+retains it. Short conceptual requests return to brief capacity after their task is known.
 Creation-event metadata is kept separately from effective terminal metadata.
 
 [Fast](https://developers.openai.com/api/docs/guides/fast-mode) accepts `fast` (with
@@ -73,7 +96,7 @@ Creation-event metadata is kept separately from effective terminal metadata.
 supports GPT-6.1 Sol through the ordinary API. Account access/rates can change; verify
 current model catalog, completed response and [prices](https://developers.openai.com/api/docs/pricing).
 The historical four-profile comparison and its accounting are recorded in
-[0.1.4 results](QUALITY_0.1.4.md). Historical success does not establish current access
+[matched paid results](VALIDATION.md#paid-cloud-comparison). Historical success does not establish current access
 for every account or general correctness.
 
 ## Preview restrictions and transport
@@ -126,13 +149,11 @@ profiles rather than inheriting a paid deployment selection without accounting.
 **This is evaluation-only.** Normal sessions and explicit summaries do not read that
 ledger and have no app-enforced dollar cap. Provider credit/rate/project/subscription
 controls remain applicable and unchanged. Output/context/request bounds are not a
-session spending limit. See [deployment verification](DEPLOYMENT_0.1.5.md).
-Do not delete or replace the existing ledger to continue this authorized comparison.
-
-**No new paid evaluation is authorized by this cleanup.** Historical cumulative
-receipts are retained privately; later authorized 0.1.9/0.1.10 work is recorded in
-[LIVE_REVIEW_0.1.10.md](LIVE_REVIEW_0.1.10.md). Preserve the original ledger and cap;
-normal user sessions are separate. Do not reset the ledger to obtain a fresh budget.
+session spending limit. See [duration validation](VALIDATION.md#duration-and-upgrades).
+Do not reset or replace a ledger to evade its cumulative cap. Running an evaluator
+requires permission to spend against the configured account; documentation is not
+that permission. Keep each run's output under a new filename. Preliminary reservations
+are conservative bounds, not actual reported cost; incomplete usage stays reserved.
 
 If a future account-credit error occurs, retain the sanitized provider error,
 request ID and UTC timestamp. Check the matching Platform organization/project and
@@ -182,4 +203,4 @@ Two distinct host profiles can explicitly use `strategy="race"` (or
 `local_strategy="race"` for local choices). This is a retained advanced feature,
 not the recommendation: actual initial races showed draining losers and cache/order
 confounding. Busy hosts are skipped; uncertain timeout quarantine remains. See
-[LATENCY_0.1.1.md](LATENCY_0.1.1.md). Never enable it speculatively to chase latency.
+[local comparison limits](VALIDATION.md#local-model-comparison). Never enable it speculatively to chase latency.

@@ -1,11 +1,18 @@
 """Local HTTP surface. Same-origin cookie auth; no secrets sent to JavaScript."""
 
 from contextlib import asynccontextmanager
+import hashlib
 import secrets
 import asyncio
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from .session import Session
 from .cloud_auth import ChatGPTAuth, account_path
 from .connections import cloud_endpoint, select
@@ -16,6 +23,20 @@ STATIC = Path(__file__).parent / "static"
 
 
 def create_app(config, session=None):
+    # One coherent frontend per backend process. Hash the actual packaged bytes,
+    # not timestamps or the application version; no build step is needed.
+    assets = {
+        name: ((STATIC / name).read_bytes(), media_type)
+        for name, media_type in {
+            "app.js": "application/javascript",
+            "app.css": "text/css",
+            "theme.js": "application/javascript",
+        }.items()
+    }
+    fingerprints = {name: hashlib.sha256(data).hexdigest() for name, (data, _) in assets.items()}
+    html = (STATIC / "index.html").read_text()
+    for name, fingerprint in fingerprints.items():
+        html = html.replace(f"/static/{name}", f"/static/{name}?v={fingerprint}")
     session = session or Session(config)
     auth = ChatGPTAuth(config.root / ".local" / "chatgpt", config.port)
     secret = secrets.token_urlsafe(32)
@@ -55,20 +76,26 @@ def create_app(config, session=None):
         )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Cache-Control"] = "no-store"
+        response.headers.setdefault("Cache-Control", "no-store")
         return response
 
     @app.get("/")
     async def index():
-        response = FileResponse(STATIC / "index.html")
+        response = HTMLResponse(html)
         response.set_cookie("interview_session", secret, httponly=True, samesite="strict")
         return response
 
     @app.get("/static/{name}")
-    async def static(name: str):
-        if name not in {"app.js", "app.css", "theme.js"}:
+    async def static(name: str, v: str | None = None):
+        if name not in assets or (v is not None and v != fingerprints[name]):
             raise HTTPException(404)
-        return FileResponse(STATIC / name)
+        data, media_type = assets[name]
+        headers = (
+            {"Cache-Control": "public, max-age=31536000, immutable", "ETag": f'"{v}"'}
+            if v is not None
+            else {}
+        )
+        return Response(data, media_type=media_type, headers=headers)
 
     @app.get("/api/state")
     async def state():
@@ -133,10 +160,36 @@ def create_app(config, session=None):
         return {"reset": True}
 
     def require_idle():
-        if session.state not in {"idle", "ended", "failed"} or session.unsaved:
+        if (
+            session.state not in {"idle", "ended", "failed"}
+            or session.unsaved
+            or (session.store and not session.store.closed)
+        ):
+            raise HTTPException(409, "End the session and finish saving before changing settings")
+
+    @app.post("/api/microphone")
+    async def microphone(request: Request):
+        require_idle()
+        try:
+            config.set_microphone((await request.json()).get("enabled"))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError:
+            raise HTTPException(507, "Could not save microphone preference; unchanged") from None
+        return {"enabled": config.microphone}
+
+    @app.post("/api/microphone-context")
+    async def microphone_context(request: Request):
+        require_idle()
+        try:
+            config.set_capture_choice("microphone_context", (await request.json()).get("enabled"))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        except OSError:
             raise HTTPException(
-                409, "End the session and finish saving before changing connections"
-            )
+                507, "Could not save microphone sharing preference; unchanged"
+            ) from None
+        return {"enabled": config.microphone_context}
 
     def save_connection(selection):
         try:
@@ -299,7 +352,7 @@ def create_app(config, session=None):
                     else ""
                 ),
                 headers={
-                    "Content-Disposition": f'attachment; filename="{session_id}-playback.txt"'
+                    "Content-Disposition": f'attachment; filename="{session_id}-transcript.txt"'
                 },
             )
         except (ValueError, OSError) as exc:

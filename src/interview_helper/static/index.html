@@ -84,66 +84,45 @@
         </section>
         <aside>
           <section class="status-panel">
-            <div class="aside-title">
-              <h2>Session pulse</h2>
-              <span id="modeBadge">STANDBY</span>
+            <div class="aside-title"><h2>Session pulse</h2><span id="modeBadge">STANDBY</span></div>
+            <div class="session-clock"><span class="live-dot" id="liveDot"></span><span id="sessionLabel">Ready</span><span id="timer">00:00</span></div>
+            <div class="pulse-grid">
+              <div class="status-row"><span><i class="status-dot" id="captureDot"></i>Playback</span><strong id="captureStatus">Idle</strong></div>
+              <div class="status-row"><span><i class="status-dot" id="asrDot"></i>ASR</span><strong id="asrStatus">Idle</strong></div>
+              <div class="status-row"><span><i class="status-dot" id="modelDot"></i>Hints</span><strong id="modelStatus">Idle</strong></div>
+              <div class="status-row"><span><i class="status-dot" id="saveDot"></i>Saving</span><strong id="saveStatus">Idle</strong></div>
             </div>
-            <div class="status-row">
-              <span
-                ><i class="status-dot" id="captureDot"></i>Playback
-                capture</span
-              ><strong id="captureStatus">Idle</strong>
-            </div>
-            <div class="status-row">
-              <span
-                ><i class="status-dot" id="asrDot"></i>Local transcription</span
-              ><strong id="asrStatus">Idle</strong>
-            </div>
-            <div class="status-row">
-              <span><i class="status-dot" id="modelDot"></i>AI hints</span
-              ><strong id="modelStatus">Idle</strong>
-            </div>
-            <div class="status-row">
-              <span><i class="status-dot" id="saveDot"></i>Continuous save</span
-              ><strong id="saveStatus">Idle</strong>
-            </div>
-            <div class="session-clock">
-              <span class="live-dot" id="liveDot"></span
-              ><span id="sessionLabel">Ready</span><span id="timer">00:00</span>
-            </div>
-            <p id="backendLabel">Local LiteLLM</p>
-            <p id="cloudDisclosure" hidden>
-              Cloud selected: transcript context leaves this local environment
-              and is sent to OpenAI. Audio remains local.
-            </p>
-            <div id="hosts"></div>
-            <div id="savedLocation" hidden><p id="transcriptPath"></p><a id="downloadTranscript">Download readable transcript</a><p id="readableError" role="status"></p></div>
-            <button id="retrySave" hidden>Retry saving</button>
+            <p id="microphoneStatus" role="status">Microphone off</p>
+            <p id="backendLabel">No hint model configured</p>
+            <p id="sourceDisclosure">Hints use playback only.</p>
+            <div id="savedLocation" hidden><a id="downloadTranscript">Download transcript ↓</a></div>
+            <p id="notice" role="status"></p><button id="retrySave" hidden>Retry saving</button>
           </section>
-          <section class="devices-panel">
-            <div class="aside-title">
-              <h2>Listening to</h2>
-              <span>AUTO</span>
-            </div>
-            <div id="devices">
-              <p class="muted">
-                Playback devices appear when your session starts.
-              </p>
-            </div>
-            <p class="aside-note">
-              Speakers & headsets, discovered automatically.<br />Your
-              microphone stays outside this session.
-            </p>
-          </section>
-          <details id="transcriptPanel">
+          <details id="transcriptPanel" open>
             <summary>
               <span>Live transcript</span><span class="summary-plus">+</span>
             </summary>
-            <div class="transcript-note">
-              Captured playback / remote conversation
+            <div class="transcript-body">
+              <div class="transcript-note">
+                Source labels identify audio paths, not speakers.
+              </div>
+              <div id="transcript"></div>
+              <div id="provisional"></div>
             </div>
-            <div id="transcript"></div>
-            <div id="provisional"></div>
+          </details>
+          <details class="microphone-panel">
+            <summary>Microphone choices<span>+</span></summary>
+            <label class="microphone-choice"><input id="includeMicrophone" type="checkbox" /> Include microphone transcript</label>
+            <label class="microphone-choice"><input id="useMicrophoneContext" type="checkbox" /> Use microphone context for hints</label>
+            <p class="aside-note">Recording and model sharing are separate choices, changed while idle. Sharing applies to live hints and Review now. Saved-session replay and explicit summaries remain playback-only.</p>
+          </details>
+          <details id="sessionDetails">
+            <summary>Session details<span>+</span></summary>
+            <p id="backendDetails"></p><p id="cloudDisclosure" hidden></p>
+            <p id="transcriptPath"></p><p id="readableError" role="status"></p>
+            <div id="hosts"></div><div id="devices"></div>
+            <p id="microphoneDetails"></p><div id="diagnostics"></div>
+            <p class="aside-note">Audio remains local. Source labels identify paths, not people. Microphone context may contain echo or background speech. Use for permitted assistance.</p>
           </details>
           <details class="cloud-settings">
             <summary>Model connection<span>+</span></summary>
@@ -193,14 +172,6 @@
             </p>
             <button id="resetContext">Reset question context</button>
           </details>
-          <div id="notice" role="status"></div>
-          <div class="permission-note">
-            <span>◈</span>
-            <p>
-              Made for mock interviews and conversations where assistance is
-              permitted.
-            </p>
-          </div>
         </aside>
       </div>
     </main>
@@ -215,7 +186,7 @@
       </div>
       <h2>Saved sessions</h2>
       <p class="muted">
-        Playback transcripts and AI hints are stored separately.
+        Transcripts and AI hints are stored separately.
       </p>
       <div id="savedList"></div>
       <div id="savedDetail"></div>

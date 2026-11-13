@@ -19,6 +19,9 @@ language = "en"
 glossary = "Java, Perl, C++, Python, SQL, API, idempotency, mutex, deadlock"
 
 [capture]
+microphone = false
+# Independent consent for live hints/Review now; replay and summaries stay playback-only.
+microphone_context = false
 include = [] # Optional monitor-name glob patterns. Empty means automatic.
 exclude = []
 rms_threshold = 0.002

@@ -66,8 +66,37 @@ class Parser:
                 if not required <= set(item) or set(item) - required - {
                     "start_revision",
                     "segments",
+                    "task",
+                    "solution",
+                    "reason",
+                    "focus",
+                    "update",
                 }:
                     raise ProtocolError("Invalid actionable header")
+                if "update" in item and (
+                    action != "UPDATE" or item["update"] not in ("followup", "correction")
+                ):
+                    raise ProtocolError("Invalid update scope")
+                if "task" in item and item["task"] != "coding":
+                    raise ProtocolError("Invalid task kind")
+                if "solution" in item and (
+                    not isinstance(item["solution"], str)
+                    or item["solution"]
+                    not in {
+                        "preserve",
+                        "replace",
+                        "invalidate",
+                        "clear",
+                    }
+                ):
+                    raise ProtocolError("Invalid reference update")
+                for field in ("reason", "focus"):
+                    if field in item and (
+                        not isinstance(item[field], str) or not 1 <= len(item[field].strip()) <= 240
+                    ):
+                        raise ProtocolError("Invalid reference explanation")
+                if item.get("update") == "correction" and not item.get("reason"):
+                    raise ProtocolError("An independent correction requires an explanation")
                 refs = item.get("segments", [])
                 if (
                     not isinstance(refs, list)
@@ -96,6 +125,61 @@ class Parser:
             if self.header["action"] in {"NEW", "UPDATE"} and not self.lines:
                 raise ProtocolError("Empty actionable answer")
             self.done = True
+        elif set(item) == {"followup"} and self.header["action"] in {"NEW", "UPDATE"}:
+            followup = item["followup"]
+            if not self.lines or "_followup" in self.header:
+                raise ProtocolError("Follow-up must occur once after answer content")
+            if followup is not None:
+                if (
+                    not isinstance(followup, dict)
+                    or set(followup) != {"text", "segments"}
+                    or not isinstance(followup["text"], str)
+                    or not 1 <= len(followup["text"].strip()) <= 360
+                    or not isinstance(followup["segments"], list)
+                    or not 1 <= len(followup["segments"]) <= 8
+                    or any(
+                        not isinstance(x, str) or not 1 <= len(x) <= 80
+                        for x in followup["segments"]
+                    )
+                    or len(set(followup["segments"])) != len(followup["segments"])
+                ):
+                    raise ProtocolError("Invalid latest follow-up")
+            self.header["_followup"] = followup
+        elif set(item) == {"requirements"} and self.header["action"] in {"NEW", "UPDATE"}:
+            facts = item["requirements"]
+            if (
+                not self.lines
+                or "_requirements" in self.header
+                or not isinstance(facts, list)
+                or not 1 <= len(facts) <= 8
+            ):
+                raise ProtocolError("Invalid requirement changes")
+            for fact in facts:
+                if (
+                    not isinstance(fact, dict)
+                    or not {"text", "kind", "segments"} <= fact.keys()
+                    or fact.keys() - {"text", "kind", "segments", "supersedes"}
+                ):
+                    raise ProtocolError("Invalid requirement fields")
+                if (
+                    not isinstance(fact["kind"], str)
+                    or fact["kind"]
+                    not in {"requirement", "assumption", "observation", "uncertainty"}
+                    or not isinstance(fact["text"], str)
+                    or not 1 <= len(fact["text"].strip()) <= 280
+                ):
+                    raise ProtocolError("Invalid requirement description")
+                for field in ("segments", "supersedes"):
+                    refs = fact.get(field, [])
+                    if (
+                        not isinstance(refs, list)
+                        or len(refs) > 8
+                        or (field == "segments" and not refs)
+                        or any(not isinstance(ref, str) or not 1 <= len(ref) <= 80 for ref in refs)
+                        or len(set(refs)) != len(refs)
+                    ):
+                        raise ProtocolError("Invalid requirement references")
+            self.header["_requirements"] = facts
         elif set(item) == {"code", "language", "scope"} and self.header["action"] in {
             "NEW",
             "UPDATE",

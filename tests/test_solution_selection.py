@@ -52,7 +52,15 @@ async def test_selection_cases_reach_effective_local_and_compact_cloud_prompts(
         assert "two pointers" in instructions and "explicit no-rescan requirement" in instructions
         assert "without a second implementation" in instructions
         assert packet["CONVERSATION"] == [
-            {"revision": 1, "segment_id": "case-1", "source": "playback-1", "text": case["speech"]}
+            {
+                "revision": 1,
+                "segment_id": "case-1",
+                "source": "playback-1",
+                "source_kind": "playback",
+                "start": None,
+                "end": None,
+                "text": case["speech"],
+            }
         ]
         assert packet["NEW_REVISIONS"] == [1, 1]
         assert payload["stream"] is True

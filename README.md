@@ -1,116 +1,137 @@
 # Interview Helper
 
-IH captures Linux desktop **playback**, transcribes it locally and streams concise
-software engineering hints into a browser notebook. Use it for permitted assistance
-or mock interviews. Microphones are excluded; transcripts represent captured playback,
-not a complete two-sided conversation. Local ASR and continuous saving continue when
-hint generation fails or the browser closes.
+**IH is a real-time technical interview assistant.** It transcribes Linux desktop
+audio locally and uses LLMs to provide concise software engineering hints and code
+examples in a browser notebook. Use it for mock interviews or conversations where
+assistance is permitted.
 
 ## Install and run
 
-From a source checkout or extracted source release:
+Download and extract the source, or clone the repository. From the project directory:
 
 ```bash
 ./start.sh
 ```
 
-Requirements: Linux x86-64, Python **3.11–3.13** with venv/pip, `flock`, `pactl`,
-`parec`, a working PulseAudio server or PipeWire PulseAudio compatibility service,
-and an existing NVIDIA driver compatible with CUDA 12/cuDNN 9. Run as your desktop
-user. IH never installs drivers or changes audio routing, firewall rules or system
-Python. CPU development is explicit: `./start.sh --cpu` on a fresh configuration;
-large-v3-turbo was slower than realtime on the development CPU.
+On first launch, IH prepares its Python environment, downloads the transcription
+model, prompts for an OpenAI API key if needed, and opens the browser. Later launches
+reuse your settings, credentials and downloaded model.
 
-The launcher checks prerequisites, reuses or creates `.venv`, installs pinned packages
-only when needed, and prepares missing configuration. It privately prompts for a
-missing API key in an interactive terminal, initializes the selected local ASR model
-(missing weights download to `Models/`), then starts the backend and opens the local
-UI. Subsequent runs reuse credentials, packages and model cache. Existing settings
-and saved provider selections take precedence. Headless use: `./start.sh --no-browser`.
-Missing credentials in noninteractive use fail with instructions instead of prompting.
+**Requires:** Linux x86-64, Python 3.11–3.13 and a compatible NVIDIA GPU setup.
+See [requirements](#requirements) below for system prerequisites.
 
-The default local URL is **http://127.0.0.1:8787**. Press **Start session**, wait for
-ASR readiness, then play permitted speech. **End session** flushes speech and saves
-results; then Ctrl+C stops the backend. Closing the tab does not stop the session.
-Keep the desktop awake and the terminal running. [Setup, key entry and upgrades](docs/INSTALLATION.md).
+The default interface is **http://127.0.0.1:8787**.
 
-## Models, privacy and cost
+## Using IH
 
-Fresh configuration uses **ordinary OpenAI API · GPT-6.1 Sol · low reasoning ·
-Ultrafast · HTTP · 1,024 output tokens including reasoning**, with local CUDA/float16
-large-v3-turbo ASR. **Transcript context sent for hints leaves this computer for
-OpenAI. API billing is separate from a ChatGPT subscription.** An existing authorized
-key can be reused; IH never creates billing accounts or enables auto-reload.
+1. Click **Start session** and wait for transcription to become ready.
+2. Join your call or play practice audio. IH captures desktop playback automatically.
+3. Read the live transcript and notebook hints as the conversation develops.
+4. Click **End session** to finish and save. Press **Ctrl+C** in the terminal to stop IH.
 
-Credentials stay backend-only in ignored private files. Inline endpoint key, configured
-environment variable, then key file is the unchanged precedence. Never put keys in
-browser storage, source, release assets or support logs. Model/processing tier access
-depends on the account; the returned terminal tier is recorded separately from the
-requested tier. No automatic provider, model or paid-tier fallback is introduced.
+Closing the browser tab does **not** stop the session. Keep the computer awake and
+the launcher running while recording.
 
-The recommended profile comes from the historical matched comparison: 26 full/one
-useful-but-incomplete answer across 27 actionable cases; useful median/p90 1.015/1.516s.
-These are dated results, **not latency or correctness guarantees for current prompts**.
-[Evidence](docs/QUALITY_0.1.4.md). WebSocket transport remains experimental.
+## What you get
 
-Optional OpenAI-compatible/LiteLLM text generation and app-owned ChatGPT subscription
-sign-in remain available with their existing restrictions. Both have live historical
-evidence; neither is selected automatically. Local GPU transcription remains essential
-regardless of hint backend. [Configuration, optional routes and limits](docs/CLOUD.md).
+- **Concise answers:** a short explanation, key points and readable code when useful.
+- **Ongoing problem context:** related questions refine the same card and preserve
+  the reference solution. Independent questions get separate cards.
+- **Latest follow-up:** brief help with the newest subquestion, without replacing
+  the main answer unnecessarily.
+- **Hands-free operation:** automatic reviews, plus an optional **Review now** button.
+- **Readable workspace:** dark/light themes, adjustable text size and independently
+  scrolling notebook and transcript panels.
+- **Continuous saving:** finalized transcripts remain saved even if hint generation
+  fails or the browser closes.
 
-Normal sessions have **no IH dollar cap or elapsed-time cutoff**. Provider spending,
-credit and rate controls still apply. The separate cumulative US$5 development benchmark
-ledger applies only to evaluation tooling; consuming it does not stop normal sessions.
-This documentation preparation ran no paid inference. Three-hour synthetic operation
-was validated earlier;
-real GPU/meeting/provider endurance remains a separate acceptance task.
+Java is the default language for coding examples; an explicit request for another
+language takes precedence. AI-generated hints can be incorrect—review the reasoning
+and code.
 
-## Notebook and saved sessions
+## Optional microphone
 
-Hints progress **TL;DR → one clear implementation when useful → complexity and edge
-cases → at most one short optional optimization**. Prefer the simplest correct approach
-suited to actual requirements and bounds; explicit performance constraints take priority.
-Follow-ups refine the same card and explain necessary changes of approach.
-[Policy checks](docs/SOLUTION_SELECTION_0.1.11.md) are offline, not model certification.
+Playback-only is the default. While no session is running, enable:
 
-Text streams as complete validated records; code appears only after complete response
-validation. Malformed or stale output rolls back. **Review now** reconsiders accumulated
-speech through the same request path. Dark/light themes, text size, paused following,
-**Return to latest**, saved history and safe literal rendering remain available.
+- **Include microphone transcript** to record your side of the conversation locally.
+- **Use microphone context for hints** to also send relevant microphone text to the
+  selected model.
 
-Finalized segments continuously save in `Transcribed/<session-id>/`: readable
-`transcript.txt`, authoritative `transcript.jsonl`, separate `hints.jsonl` and metadata.
-Custom paths are preserved. Live history retains 200 entries; full journals stay on disk.
-Model context is bounded; overflow pauses hints visibly while transcript saving continues.
-Storage errors pause capture and retain unsaved events for **Retry saving**. Do not exit
-with unsaved data. Back up private configuration and complete session directories.
+These are separate choices. Microphone comments normally guide the brief follow-up;
+interviewer questions remain the focus of the main solution.
 
-```bash
-./run.sh recover SESSION_ID
-./run.sh recover SESSION_ID --write-view  # New view; originals remain
+Microphone capture requires a supported PipeWire echo-cancellation setup with one
+directly routed physical output. Plain PulseAudio supports playback capture only.
+Unsupported microphone setups show a reason while playback and hints continue.
+Overlapping speech may reduce transcription quality. Playback/Microphone labels
+identify audio sources, not guaranteed speaker identities.
+
+See [microphone setup and troubleshooting](docs/INSTALLATION.md).
+
+## Privacy and cost
+
+- **Audio is transcribed locally.** IH does not save raw audio recordings.
+- **Hints use the selected model.** With the default OpenAI API connection, playback
+  transcript context is sent to OpenAI. Microphone text is included in live hints
+  only when its separate sharing option is enabled.
+- **API billing is separate from ChatGPT subscriptions.** Normal sessions have no
+  IH spending cap or automatic duration limit; provider quotas and charges apply.
+- **Credentials stay on the backend.** Keep API keys and saved sessions out of Git
+  repositories and public uploads.
+
+Optional OpenAI-compatible/LiteLLM backends and ChatGPT sign-in are also supported,
+subject to their documented requirements. See [model configuration](docs/CLOUD.md)
+for defaults, processing tiers and alternative connections.
+
+## Saved sessions
+
+Open **Saved sessions** to review previous work or download a readable transcript.
+By default, each session is saved under:
+
+```text
+Transcribed/<session-id>/
 ```
 
-## Troubleshooting and validation
+The directory includes `transcript.txt`, the detailed transcript journal, hints and
+session metadata. Custom storage paths are supported.
 
-- `./diagnose.sh` checks audio/compute and the selected model catalog; it makes no
-  inference request. `./diagnose.sh --asr` explicitly loads/warms local ASR.
-- Playback discovery errors identify the failed stage. Custom PipeWire mirroring may
-  need explicit include/exclude patterns; physical microphones stay excluded.
-- Model/authentication errors remain visible while transcription/saving continue.
-  After an uncertain timeout, verify the server is idle before restarting; do not
-  blindly retry or disable quarantine.
-- Stop the backend before updating/installing. Existing `install.sh`, `run.sh` and
-  `diagnose.sh` remain supported. [Checksum-verified update](docs/INSTALLATION.md#updating).
+If saving fails, resolve the problem and use **Retry saving** before exiting.
+See [operations and recovery](docs/OPERATIONS.md) for recovery instructions.
 
-[Operations/recovery](docs/OPERATIONS.md), [architecture and cleanup decisions](docs/MAINTENANCE_0.1.11.md),
-[validation history](docs/VALIDATION.md), [desktop smoke test](docs/INSTALLATION.md#desktop-smoke-test)
-and [third-party attribution](THIRD_PARTY.md) describe the supported scope.
-Offline checks use `.venv/bin/pytest -q`; development scripts are retained separately
-under `scripts/`. Replay and summary commands can incur normal API charges; they are
-not offline tests. Paid evaluation requires its separate ledger and authorization.
+## Requirements
 
-Source archives come from reviewed commits or release tags and exclude configuration,
-credentials, models, environments, sessions and private validation artifacts. Wheels
-include runtime resources and all bundled licensing notices. See
-[licensing and provenance](THIRD_PARTY.md) and [source distribution](docs/DISTRIBUTION.md).
-This preparation does not publish a repository, package or new application release.
+- Linux x86-64 with Python **3.11–3.13**, `venv` and `pip`.
+- `flock`, `pactl` and `parec`.
+- PulseAudio, or PipeWire with PulseAudio compatibility.
+- An existing NVIDIA driver compatible with **CUDA 12 / cuDNN 9**.
+- For optional microphone capture: PipeWire native monitor-mode WebRTC echo
+  cancellation, its SPA library, `pw-cli`, `pw-dump`, `pw-cat` and appropriate
+  session-manager permissions.
+
+Run IH as your normal desktop user. The launcher does not install GPU drivers or
+change system audio routing.
+
+CPU mode is available for development with `./start.sh --cpu` on a fresh
+configuration, but may be too slow for live transcription. To launch without opening
+a browser, use `./start.sh --no-browser`.
+
+## Troubleshooting and documentation
+
+```bash
+./diagnose.sh        # Check audio, compute and the selected model catalog
+./diagnose.sh --asr  # Also load and warm up local transcription
+```
+
+Stop IH before installing an update. Follow the
+[update instructions](docs/INSTALLATION.md#updating) to preserve settings and sessions.
+
+- [Installation and setup](docs/INSTALLATION.md)
+- [Models and cloud connections](docs/CLOUD.md)
+- [Operations and recovery](docs/OPERATIONS.md)
+- [Validation and known limitations](docs/VALIDATION.md)
+
+## License
+
+IH is provided under the [MIT license](LICENSE), with bundled components carrying
+their own notices. See [third-party attribution](THIRD_PARTY.md) for the full licensing
+details.

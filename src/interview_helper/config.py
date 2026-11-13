@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 import os
+import json
 import tomllib
 from urllib.parse import urlsplit
 
@@ -104,6 +105,10 @@ class Config:
     context_chars: int = 6000
     scenario_chars: int = 16000
     candidate_context: str = ""
+    coding_output_tokens: int = 2048
+    microphone: bool = False
+    microphone_context: bool = False
+    capture_file: Path | None = field(default=None, init=False, repr=False)
     rms_threshold: float = 0.002
     port: int = 8787
 
@@ -144,9 +149,39 @@ class Config:
         from .connections import restore
 
         restore(obj)
+        obj.capture_file = root / ".local" / (path.stem + "-capture.json")
+        if obj.capture_file.exists():
+            saved = json.loads(obj.capture_file.read_text())
+            if (
+                not isinstance(saved, dict)
+                or "microphone" not in saved
+                or set(saved) - {"microphone", "microphone_context"}
+                or any(type(v) is not bool for v in saved.values())
+            ):
+                raise ValueError("Invalid saved microphone preference")
+            obj.microphone = saved["microphone"]
+            obj.microphone_context = saved.get("microphone_context", False)
         return obj
 
+    def set_microphone(self, enabled):
+        self.set_capture_choice("microphone", enabled)
+
+    def set_capture_choice(self, name, enabled):
+        if name not in {"microphone", "microphone_context"} or type(enabled) is not bool:
+            raise ValueError("Microphone choice must be true or false")
+        values = {"microphone": self.microphone, "microphone_context": self.microphone_context}
+        values[name] = enabled
+        if self.capture_file:
+            from .storage import atomic_json
+
+            self.capture_file.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            os.chmod(self.capture_file.parent, 0o700)
+            atomic_json(self.capture_file, values)
+        setattr(self, name, enabled)
+
     def validate(self):
+        if type(self.microphone) is not bool or type(self.microphone_context) is not bool:
+            raise ValueError("capture.microphone must be true or false")
         if self.device not in {"cpu", "cuda"}:
             raise ValueError("ASR device must be explicitly cpu or cuda")
         if self.compute_type not in {"int8", "float16", "float32", "int8_float16"}:
@@ -177,5 +212,10 @@ class Config:
             raise ValueError("Port or silence threshold out of range")
         if not 10 <= self.context_seconds <= 180 or not 6000 <= self.scenario_chars <= 32000:
             raise ValueError("Recent/scenario context bound out of range")
+        if (
+            type(self.coding_output_tokens) is not int
+            or not 1024 <= self.coding_output_tokens <= 3072
+        ):
+            raise ValueError("Coding output allowance must be 1024–3072 tokens")
         if len(self.candidate_context) > 6000:
             raise ValueError("Candidate context exceeds 6000 characters")

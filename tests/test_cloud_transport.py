@@ -409,7 +409,9 @@ async def test_socket_recovery_keeps_session_question_constraints_and_saving(tmp
         lane.socket.replies = [[{"type": "error", "error": {"code": "server_error"}}]]
         await submit("What happens when the process crashes while writing?", 2)
         assert session.state == "recording" and session.controller.cards[-1]["id"] == active
-        assert any("Hint failed" in n["message"] for n in session.notices)
+        assert any(
+            n.get("kind") == "hint_failure" and not n.get("resolved") for n in session.notices
+        )
         assert session.status["save"] == "saved"
     finally:
         await session.shutdown()
