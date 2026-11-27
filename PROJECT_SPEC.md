@@ -60,8 +60,8 @@ remain playback-only.
 
 The default solution is the simplest correct, readable implementation suitable for
 stated requirements and input bounds. Explicit performance constraints take priority.
-Prefer a TL;DR, one clear implementation, actual complexity and important edge cases,
-then at most a short useful optimization note. Java is the default unless another
+Prefer Solution in brief, one complete readable implementation, actual complexity and
+important edge cases, then at most a short useful optimization note. Java is the default unless another
 language is requested. Optimization refines the same card when requirements change;
 IH must not invent access to the candidate's editor or unseen implementation.
 
@@ -74,17 +74,18 @@ back drafts and retain prior complete guidance. Text is rendered safely, never a
 raw HTML or hidden reasoning.
 
 A coding task retains a stable parent, source-linked requirement changes and a separate
-validated reference. Bounds: 24 requirements including superseded entries, 280 characters
-per requirement, 8 patches per response and 8 source references per patch. Unknown
+validated reference. Central requested operations must be implemented, not hidden behind
+undefined helpers; code length follows the problem rather than a line-count target.
+Bounds: 24 requirements including superseded entries, 280 characters per requirement, 8 patches per response and 8 source references per patch. Unknown
 sources or supersession targets are rejected. Code is limited to 5,000 characters;
 the protocol response is bounded to 12,000. Preserve/replace/invalidate/clear operations
 make code changes explicit. Invalidating or clearing requires a reason; preserving
 cannot repair an invalidated reference. Prose-only follow-ups keep valid reference code.
 
 Main updates replace their supporting notes together. A follow-up-only update preserves
-the main semantic state and has one replaceable tail of at most 360 characters with
+the main semantic state and has one replaceable follow-up of at most 360 characters with
 1–8 source references. NEW does not inherit a previous follow-up. Mic uncertainty
-normally updates only that tail; an independent correction needs an explicit reason.
+normally updates only that follow-up; an independent correction needs an explicit reason.
 New playback constraints can still change the main approach and code. Legacy one-line
 notes retain complete qualifiers. Empty entries and duplicate presentation are filtered
 without weakening response validation.
@@ -105,8 +106,13 @@ readable-view failures preserve the journal and surface a separate error.
 
 The plain HTML/CSS/JavaScript interface uses safe rendering and localhost Host/Origin,
 cookie and CSRF protections. Live history is bounded; full journals grow on disk.
-Live and archived cards share rendering and content-fingerprinted assets. HTML/private
-data are not cached; matching assets may be. Browser preferences, paused reading and
+Live and archived cards share rendering and content-fingerprinted assets. A substantive
+Latest follow-up precedes Solution in brief; initial answers have no follow-up section.
+Code stays expanded, with safe lexical syntax colors and plain-text copying. Exact,
+unique backtick expressions can mark lines and expose Show in code; ambiguous matches
+are omitted. Unknown languages remain plain text. Unchanged answer regions retain DOM
+nodes; a unique unchanged selection/reading line can survive code replacement.
+HTML/private data are not cached; matching assets may be. Browser preferences, paused reading and
 code anchors survive normal streaming/status updates. Loading a new page does not
 force-reload another active page. See [installation](docs/INSTALLATION.md#browser-upgrade-behavior).
 

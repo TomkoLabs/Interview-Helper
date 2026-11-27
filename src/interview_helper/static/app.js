@@ -30,6 +30,109 @@ function textWithCode(parent, text) {
       ),
     );
 }
+// Small lexical highlighter: only text nodes/spans, never generated HTML.
+// Unknown languages retain literal text. Coloring is independent of follow-up marks.
+const codeKeywords = {
+  java: "abstract assert boolean break byte case catch char class const continue default do double else enum extends final finally float for if implements import instanceof int interface long native new package private protected public record return sealed short static strictfp super switch synchronized this throw throws transient try var void volatile while yield true false null",
+  javascript: "async await break case catch class const continue debugger default delete do else export extends finally for from function if import in instanceof let new of return static super switch this throw try typeof var void while with yield true false null undefined",
+  python: "and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield True False None",
+  cpp: "auto bool break case catch char class const constexpr continue default delete do double else enum explicit extern false float for friend if inline int long namespace new nullptr private protected public return short signed sizeof static struct switch template this throw true try typedef typename union unsigned using virtual void volatile while",
+  sql: "select from where join inner outer left right on group by order asc desc having limit offset insert into values update set delete create table index distinct null not and or as in exists case when then else end count sum",
+};
+function codeTokens(text, language) {
+  const aliases = {js: "javascript", typescript: "javascript", ts: "javascript", py: "python", c: "cpp", "c++": "cpp"};
+  language = aliases[language] || language;
+  if (!codeKeywords[language]) return [{text, kind: ""}];
+  const words = new Set(codeKeywords[language].split(" "));
+  const comments = language === "python" ? /#[^\n]*/ : language === "sql"
+    ? /--[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/ : /\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)/;
+  const values = /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'|`(?:\\[\s\S]|[^`\\])*`|\b\d[\d_]*(?:\.\d+)?(?:[eE][+-]?\d+)?[fFdDlL]?\b|\b[A-Za-z_$][\w$]*\b/;
+  const pattern = new RegExp(comments.source + "|" + values.source, "g");
+  const tokens = [];
+  let position = 0;
+  for (const match of text.matchAll(pattern)) {
+    if (match.index > position) tokens.push({text: text.slice(position, match.index), kind: ""});
+    const value = match[0];
+    let kind = "";
+    if (/^(\/\/|\/\*)/.test(value) || (language === "python" && value[0] === "#") || (language === "sql" && value.startsWith("--"))) kind = "comment";
+    else if (/^["'`]/.test(value)) kind = "string";
+    else if (/^\d/.test(value)) kind = "number";
+    else if (words.has(language === "sql" ? value.toLowerCase() : value)) kind = "keyword";
+    else if (/^[A-Z][A-Za-z0-9_$]*$/.test(value)) kind = "type";
+    else if (/^\s*\(/.test(text.slice(match.index + value.length))) kind = "method";
+    tokens.push({text: value, kind});
+    position = match.index + value.length;
+  }
+  if (position < text.length) tokens.push({text: text.slice(position), kind: ""});
+  return tokens;
+}
+function renderCode(text, language) {
+  const pre = node("pre"), code = node("code");
+  pre.dataset.code = text;
+  pre.append(code);
+  let line = node("span", "code-line");
+  code.append(line);
+  for (const token of codeTokens(text, language)) {
+    token.text.split("\n").forEach((part, index) => {
+      if (index) {
+        code.append(document.createTextNode("\n"));
+        line = node("span", "code-line"); code.append(line);
+      }
+      if (part) line.append(token.kind ? node("span", "syntax-" + token.kind, part) : document.createTextNode(part));
+    });
+  }
+  return pre;
+}
+function codeMatches(text, followup) {
+  const lines = new Set();
+  for (const match of followup.matchAll(/`([^`\n]{1,160})`/g)) {
+    const quote = match[1], start = text.indexOf(quote);
+    if (start < 0 || text.indexOf(quote, start + 1) !== -1) continue;
+    // Never match a short identifier inside another identifier.
+    if ((/^[\w$]/.test(quote) && /[\w$]/.test(text[start - 1] || "")) ||
+        (/[\w$]$/.test(quote) && /[\w$]/.test(text[start + quote.length] || ""))) continue;
+    lines.add(text.slice(0, start).split("\n").length - 1);
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+function updatePart(element, name, key, draw) {
+  let part = element.querySelector(':scope > [data-part="' + name + '"]');
+  if (!part) { part = node("div"); part.dataset.part = name; element.append(part); }
+  if (part.renderKey !== key) {
+    part.replaceChildren(); draw(part); part.renderKey = key;
+  }
+  part.hidden = !part.childNodes.length;
+  return part;
+}
+function rememberSelection(element) {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  const parent = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+  const part = parent.closest("[data-part]");
+  if (!part || !element.contains(part) || !part.contains(range.endContainer)) return null;
+  const before = document.createRange(); before.selectNodeContents(part); before.setEnd(range.startContainer, range.startOffset);
+  return {part: part.dataset.part, text: range.toString(), start: before.toString().length,
+    source: part.textContent, anchor: selection.anchorNode, focus: selection.focusNode,
+    backward: selection.anchorNode === range.endContainer && selection.anchorOffset === range.endOffset};
+}
+function restoreSelection(element, saved) {
+  if (!saved || (saved.anchor.isConnected && saved.focus.isConnected)) return;
+  const part = element.querySelector('[data-part="' + saved.part + '"]');
+  if (!part) return;
+  const text = part.textContent;
+  const start = text === saved.source ? saved.start : text.indexOf(saved.text);
+  if (start < 0 || (text !== saved.source && text.indexOf(saved.text, start + 1) !== -1)) return;
+  const walker = document.createTreeWalker(part, NodeFilter.SHOW_TEXT);
+  let current, offset = 0, a, b;
+  while ((current = walker.nextNode())) {
+    const end = offset + current.length;
+    if (!a && start <= end) a = [current, start - offset];
+    if (start + saved.text.length <= end) { b = [current, start + saved.text.length - offset]; break; }
+    offset = end;
+  }
+  if (a && b) window.getSelection().setBaseAndExtent(...(saved.backward ? [...b, ...a] : [...a, ...b]));
+}
 function renderAnswer(element, text) {
   element.replaceChildren();
   let list = null;
@@ -42,9 +145,14 @@ function renderAnswer(element, text) {
     if (fence && end > i + 1) {
       list = null;
       if (fence[2] === "snippet") element.append(node("div", "code-label", "Core snippet"));
-      const pre = node("pre");
-      pre.append(node("code", "", lines.slice(i + 1, end).join("\n")));
-      element.append(pre);
+      const raw = lines.slice(i + 1, end).join("\n");
+      const copy = node("button", "copy-code", "Copy code");
+      copy.type = "button";
+      copy.onclick = async () => {
+        try { await navigator.clipboard.writeText(raw); copy.textContent = "Copied"; }
+        catch { copy.textContent = "Select code to copy"; }
+      };
+      element.append(copy, renderCode(raw, fence[1]));
       i = end;
       continue;
     }
@@ -59,66 +167,76 @@ function renderAnswer(element, text) {
     } else {
       list = null;
       const p = node("p");
-      textWithCode(p, line);
+      textWithCode(p, line.replace(/^(?:TL;DR|Solution in brief):\s*/i, ""));
       element.append(p);
     }
   }
 }
 function renderGuidance(element, card) {
-  if (!card.reference && !card.guidance && !card.requirements) {
-    renderAnswer(element, card.answer || "");
-    return;
-  }
-  const requirementsOpen = element.querySelector(".task-requirements")?.open || false;
-  const oldCode = element.querySelector("pre");
-  const codeText = oldCode?.textContent;
-  const codeScroll = oldCode?.scrollLeft || 0;
-  element.replaceChildren();
+  const selection = rememberSelection(element);
+  const followupText = card.latest_followup?.text?.trim() || "";
+  // Stable regions keep unchanged reference text, selection and horizontal scroll.
+  const followup = updatePart(element, "followup", followupText, part => {
+    if (!followupText) return;
+    part.className = "latest-followup";
+    part.append(node("div", "guidance-label", "Latest follow-up"));
+    const text = node("p"); textWithCode(text, followupText); part.append(text);
+    const jump = node("button", "show-in-code", "Show in code");
+    jump.hidden = true;
+    jump.onclick = () => {
+      const target = element.querySelector(".code-line.followup-line");
+      if (!target) return;
+      const container = element.closest("#savedDialog") || history;
+      const top = container.getBoundingClientRect().top;
+      container.scrollTop += target.getBoundingClientRect().top - top - 32;
+      if (container === history) { following = false; automaticScrollTop = history.scrollTop; $("latestButton").hidden = false; }
+    };
+    part.append(jump);
+  });
+  updatePart(element, "focus", card.focus && !followupText ? card.focus : "", part => {
+    if (card.focus && !followupText) part.append(node("div", "guidance-label", card.focus));
+  });
+  updatePart(element, "guidance", card.guidance || card.answer || "", part => {
+    if (!card.guidance && !card.answer) return;
+    part.append(node("div", "guidance-label solution-label", "Solution in brief"));
+    const text = node("div"); renderAnswer(text, card.guidance || card.answer || ""); part.append(text);
+  });
+  const ref = card.reference;
+  const warnings = [];
+  if (ref?.status === "needs_revision") warnings.push("Update needed" + (ref.reason ? ": " + ref.reason : "."));
+  if (ref && card.review_status === "failed") warnings.push("Latest update failed; retained code shown.");
+  if (!ref && card.reference_action === "clear") warnings.push("Reference cleared: " + card.reference_reason);
+  updatePart(element, "warnings", warnings.join(" "), part => {
+    if (warnings.length) part.append(node("p", "reference-warning", warnings.join(" ")));
+  });
+  const reference = updatePart(element, "reference", ref?.code || "", part => {
+    part.className = "reference-code";
+    if (ref) renderAnswer(part, ref.code);
+  });
+  updatePart(element, "notes", ref?.notes || "", part => {
+    if (ref?.notes) renderAnswer(part, ref.notes);
+  });
   const facts = (card.requirements || []).filter(f => typeof f.text === "string" && f.text.trim() && !/^[-*]\s*$/.test(f.text.trim()));
-  if (facts.length) {
+  const requirementsOpen = element.querySelector(".task-requirements")?.open || false;
+  updatePart(element, "requirements", JSON.stringify(facts), part => {
+    if (!facts.length) return;
     const summary = node("details", "task-requirements");
     summary.open = requirementsOpen;
     summary.append(node("summary", "", "Problem requirements and assumptions"));
     const list = node("ul");
-    facts.forEach((f) => {
+    facts.forEach(f => {
       const li = node("li", f.status === "active" ? "" : "muted", f.kind + ": " + f.text + (f.status === "active" ? "" : " · " + (f.status || "unreviewed").replaceAll("_", " ")));
       li.title = "Playback evidence: " + (f.segments || []).map(s => s + (f.evidence_revisions?.[s] ? " (revision " + f.evidence_revisions[s] + ")" : "")).join(", ") + (f.evidence_status === "source_changed" ? " · source changed" : "");
       list.append(li);
     });
-    summary.append(list);
-    element.append(summary);
-  }
-  if (card.focus && !card.latest_followup) element.append(node("div", "guidance-label", card.focus));
-  const guidance = node("div");
-  renderAnswer(guidance, card.guidance || card.answer || "");
-  element.append(guidance);
-  if (card.reference) {
-    const ref = card.reference;
-    // Freshness is not a known conflict. Keep provenance in card metadata and
-    // reserve prominent notices for invalidated code or a failed replacement.
-    const warnings = [];
-    if (ref.status === "needs_revision") warnings.push("Update needed" + (ref.reason ? ": " + ref.reason : "."));
-    if (card.review_status === "failed") warnings.push("Latest update failed; retained code shown.");
-    if (warnings.length) element.append(node("p", "reference-warning", warnings.join(" ")));
-    const code = node("div", "reference-code");
-    renderAnswer(code, ref.code);
-    if (ref.notes) {
-      const notes = node("div");
-      renderAnswer(notes, ref.notes);
-      code.append(notes);
-    }
-    element.append(code);
-    const currentCode = code.querySelector("pre");
-    if (currentCode && currentCode.textContent === codeText) currentCode.scrollLeft = codeScroll;
-  } else if (card.reference_action === "clear") {
-    element.append(node("p", "reference-status", "Reference cleared: " + card.reference_reason));
-  }
-  if (card.latest_followup?.text?.trim()) {
-    const followup = node("ul", "latest-followup");
-    const bullet = node("li");
-    textWithCode(bullet, "Latest follow-up: " + card.latest_followup.text);
-    followup.append(bullet); element.append(followup);
-  }
+    summary.append(list); part.append(summary);
+  });
+  const pre = reference.querySelector("pre");
+  const matches = pre && ref.status !== "needs_revision" ? codeMatches(pre.dataset.code, followupText) : [];
+  reference.querySelectorAll(".code-line").forEach((line, i) => line.classList.toggle("followup-line", matches.includes(i)));
+  const jump = followup.querySelector(".show-in-code");
+  if (jump) jump.hidden = !matches.length;
+  restoreSelection(element, selection);
 }
 async function api(path, method = "GET", body) {
   const response = await fetch("/api/" + path, {
@@ -174,20 +292,22 @@ function cardElement(card, index, expanded, activeTask) {
     });
   }
   entry.number.textContent = String(index + 1).padStart(2, "0");
-  entry.toggle.textContent = card.question;
+  if (entry.toggle.textContent !== card.question) entry.toggle.textContent = card.question;
   entry.status.textContent =
     (card.developing ? "Question incomplete · " : "") +
     (card.state === "complete" ? "" : card.state + " · ") +
     (card.host || "") + (card.diagnostics?.response_service_tier ? " · effective " + card.diagnostics.response_service_tier : "") +
     (activeTask && card.review_status === "pending" && card.state !== "updating" ? " · New speech awaiting review" : "");
-  entry.preview.replaceChildren();
   entry.preview.hidden = !card.preview;
-  if (card.preview) {
-    entry.preview.append(node("b", "", "New guidance · validating replacement"));
+  const previewSelection = rememberSelection(entry.preview);
+  updatePart(entry.preview, "preview", card.preview || "", part => {
+    if (!card.preview) return;
+    part.append(node("b", "", "New guidance · validating replacement"));
     const content = node("div");
     renderAnswer(content, card.preview);
-    entry.preview.append(content, node("small", "", "Previous reference remains below; changes apply only after validation."));
-  }
+    part.append(content, node("small", "", "Previous reference remains below; changes apply only after validation."));
+  });
+  restoreSelection(entry.preview, previewSelection);
   entry.el.classList.toggle("drafting", card.state !== "complete");
   const contentKey = JSON.stringify([card.answer, card.guidance, card.reference, card.requirements, card.focus, card.review_status, card.latest_followup]);
   if (entry.lastAnswer !== contentKey) {
@@ -346,6 +466,8 @@ function render(data) {
   const readingCode = oldCode && codeTop <= historyTop &&
     oldCode.getBoundingClientRect().bottom > historyTop;
   const codeText = readingCode ? oldCode.textContent : null;
+  const readLine = readingCode ? [...oldCode.querySelectorAll(".code-line")].find(line => line.getBoundingClientRect().bottom > historyTop) : null;
+  const readLineTop = readLine?.getBoundingClientRect().top;
   const ids = new Set(merged.map((c) => c.id));
   for (const [id, entry] of cards)
     if (!ids.has(id)) {
@@ -374,9 +496,11 @@ function render(data) {
     automaticScrollTop = history.scrollTop;
   } else if (anchor?.isConnected) {
     const currentCode = anchor.querySelector(".answer pre");
+    const sameLines = readLine ? [...(currentCode?.querySelectorAll(".code-line") || [])].filter(line => line.textContent === readLine.textContent) : [];
     history.scrollTop = beforeTop + (
       readingCode && currentCode?.textContent === codeText
         ? currentCode.getBoundingClientRect().top - codeTop
+        : sameLines.length === 1 ? sameLines[0].getBoundingClientRect().top - readLineTop
         : anchor.getBoundingClientRect().top - anchorTop
     );
     automaticScrollTop = history.scrollTop;

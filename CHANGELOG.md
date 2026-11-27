@@ -2,7 +2,17 @@
 
 Current behavior is described in [the specification](PROJECT_SPEC.md). Historical
 measurements and their limits are consolidated in [validation](docs/VALIDATION.md).
-Documentation-only maintenance retains version 0.1.19 and unchanged runtime behavior.
+Documentation-only maintenance does not change the application version.
+
+## 0.1.20 — glanceable live hints, 2026-11-24
+
+- Lead with Solution in brief; show one Latest follow-up above the retained solution.
+- Ask for one lean, complete implementation and direct answers to concrete examples.
+- Highlight code safely in both themes, copy plain text, and mark/jump to uniquely
+  quoted expressions without changing syntax colors.
+- Preserve unchanged code DOM, reading position and selection through hint updates;
+  restore a uniquely retained selection across code replacement where possible.
+- Reject follow-up records on initial answers; keep strict terminal-record validation.
 
 ## 0.1.19 — stable answers and concise follow-ups, 2026-11-12
 

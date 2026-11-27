@@ -130,6 +130,8 @@ class Parser:
             if not self.lines or "_followup" in self.header:
                 raise ProtocolError("Follow-up must occur once after answer content")
             if followup is not None:
+                if self.header["action"] == "NEW":
+                    raise ProtocolError("Initial answers cannot contain a latest follow-up")
                 if (
                     not isinstance(followup, dict)
                     or set(followup) != {"text", "segments"}

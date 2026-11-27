@@ -17,7 +17,7 @@ PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q -p no:cacheprovider
 bash -n install.sh run.sh start.sh diagnose.sh
 ```
 
-The 0.1.19 suite has 264 tests. It covers persistence/recovery/disk failures, question
+The 0.1.20 suite has 267 tests. It covers persistence/recovery/disk failures, question
 assembly, source discovery/deduplication, revisions, protocol/stream rollback, context
 bounds, mic consent/recovery, shutdown, timeout quarantine, cloud contracts/budgets,
 connection recovery, setup, migration and upgrade caches. Test doubles and simulated
@@ -27,6 +27,39 @@ For packaging, use isolated staging with the declared build backend. Verify pack
 prompts/static resources and the licenses listed in [third-party attribution](../THIRD_PARTY.md).
 Do not upgrade the running environment or execute the launcher merely to inspect source.
 Hosted CI status is a per-commit delivery result, separate from local checks.
+
+## Live-hint presentation checks
+
+**November 24, 2026, 0.1.20 candidate:** 267 offline tests passed, plus lint,
+formatting, dependency consistency and shell syntax checks. The focused regressions
+cover initial/follow-up separation, preserved reference/cue on explanation/filler,
+changed logic on new requirements, literal token rendering and ambiguous code matches.
+An isolated browser harness passed 22 checks for ordering, both-theme syntax categories,
+DOM/selection/reading-position preservation, replacement, jumps and archive/non-coding
+rendering. Clipboard copy/paste matched the original code exactly. Actual dark/light
+previews were inspected at 1280×800. These are browser
+and text-input checks, not microphone, device switching or meeting endurance tests.
+
+The single scheduler question was submitted to the configured local model through the
+normal controller/gateway/parser/storage path. Four local attempts produced two accepted
+answers and two rejected responses without the terminal record. Captured answer bytes
+in one failure ended after requirements with a provider stop; the final prompt includes
+an explicit terminal-record reminder. Validation was not relaxed. The final answer
+puts the concrete capacity decision before the code. Its generated Java compiled for
+Java 8 and passed 20 deterministic checks for priority, FIFO ties, capacity, strict head
+blocking and rolling expiration including the exact 60-second boundary.
+
+Limitations of that one answer: it assumes serialized calls, nondecreasing caller time
+and valid token estimates; its complexity note omits the O(log n) queue removal cost
+of successful dispatch. The opening is longer than the requested one-to-two-sentence
+target and repeats its example below code. This is not proof of future model correctness
+or protocol reliability. No paid model calls were made for this iteration.
+
+For optional repeatable browser checks, run `scripts/ui_fixture.py` with the project
+Python environment, open its root page first, then `/hint-checks` on that same origin
+and select **Run synthetic hint UI checks**. This harness contains synthetic data and
+never enters the production page/routes; it needs no provider call. The copy check
+accepts a plain-text paste after using **Copy code**.
 
 ## Current answer and microphone checks
 

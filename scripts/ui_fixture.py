@@ -4,6 +4,7 @@
 import asyncio
 from pathlib import Path
 import uvicorn
+from fastapi.responses import FileResponse, HTMLResponse
 from interview_helper.app import create_app
 from interview_helper.config import Config
 from interview_helper.session import Session
@@ -114,11 +115,24 @@ async def main():
             await asyncio.sleep(0.2)
 
     task = asyncio.create_task(commands())
+    app = create_app(config, session)
+    # Optional checks stay in the synthetic harness, never in production routes.
+    static = Path(__file__).resolve().parents[1] / "src/interview_helper/static"
+
+    @app.get("/hint-checks")
+    async def hint_checks():
+        html = (static / "index.html").read_text()
+        return HTMLResponse(
+            html.replace("</body>", '<script defer src="/hint-checks.js"></script></body>')
+        )
+
+    @app.get("/hint-checks.js")
+    async def hint_check_script():
+        return FileResponse(Path(__file__).with_name("check_hint_ui.js"))
+
     try:
         await uvicorn.Server(
-            uvicorn.Config(
-                create_app(config, session), host="127.0.0.1", port=8788, access_log=False
-            )
+            uvicorn.Config(app, host="127.0.0.1", port=8788, access_log=False)
         ).serve()
     finally:
         task.cancel()
